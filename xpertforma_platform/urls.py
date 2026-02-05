@@ -20,4 +20,13 @@ from django.urls import path,include
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/',include("training.urls_coach")),
+from django.urls import path, include
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+
+urlpatterns = [
+    path('admin/', admin.site.urls),
+    path("api/auth/login/", TokenObtainPairView.as_view(), name="jwt-login"),
+    path("api/auth/refresh/", TokenRefreshView.as_view(), name="jwt-refresh"),
+    path("api/auth/", include("accounts.urls_auth")),
+
 ]
