@@ -8,6 +8,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.decorators import action
 
+from accounts.models import PlayerProfile
 from accounts.permissions import IsCoach
 from training.models import TrainingPlan, TrainingSession, TrainingPlanPlayer
 from training.serializers_coach import (
@@ -143,20 +144,19 @@ class CoachTrainingPlanViewSet(viewsets.ModelViewSet):
     # -------- Stage 3: list coach players for checkbox list --------
     @action(detail=False, methods=["get"], url_path="players")
     def coach_players(self, request):
-        # returns players whose PlayerProfile.coach == request.user
-        players = (
-            request.user.coached_players
-            .select_related("player_profile")
-            .all()
+        # get PlayerProfiles for this coach
+        profiles = (
+            PlayerProfile.objects
+            .filter(coach=request.user)
+            .select_related("user")
         )
 
         result = []
-        for u in players:
-            pp = getattr(u, "player_profile", None)
+        for pp in profiles:
             result.append({
-                "id": str(u.id),
-                "name": u.name,
-                "position": getattr(pp, "position", "") if pp else "",
+                "id": str(pp.user.id),
+                "name": pp.user.name,
+                "position": pp.position,
             })
 
         return Response(result)
@@ -178,7 +178,7 @@ class CoachTrainingPlanViewSet(viewsets.ModelViewSet):
 
         # only allow assigning your own players (Coach 1:N Players rule)
         allowed_ids = set(
-            request.user.coached_players.filter(id__in=requested_ids).values_list("id", flat=True)
+            request.user.coached_players.filter(user_id__in=requested_ids).values_list("user_id", flat=True)
         )
 
         # strategy: make DB match exactly what's sent (checkbox save)
