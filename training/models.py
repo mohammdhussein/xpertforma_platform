@@ -2,6 +2,7 @@ import uuid
 from django.db import models
 from django.core.exceptions import ValidationError
 
+
 class TrainingPlan(models.Model):
     plan_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
@@ -71,3 +72,21 @@ class TrainingPlanPlayer(models.Model):
 
     class Meta:
         unique_together = ("plan", "player")
+
+
+class PlayerSessionProgress(models.Model):
+    STATUS_CHOICES = [
+        ("not_started", "Not Started"),
+        ("in_progress", "In Progress"),
+        ("done", "Done"),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    player = models.ForeignKey("accounts.User", on_delete=models.CASCADE, related_name="session_progress")
+    session = models.ForeignKey("training.TrainingSession", on_delete=models.CASCADE, related_name="player_progress")
+
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="not_started")
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ("player", "session")
