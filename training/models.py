@@ -78,7 +78,7 @@ class PlayerSessionProgress(models.Model):
     STATUS_CHOICES = [
         ("not_started", "Not Started"),
         ("in_progress", "In Progress"),
-        ("done", "Done"),
+        ("complete", "Completed"),
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
