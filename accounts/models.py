@@ -5,6 +5,7 @@ import uuid
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, BaseUserManager
 
+
 class UserManager(BaseUserManager):
     def create_user(self, email, password=None, **extra):
         if not email:
@@ -19,6 +20,7 @@ class UserManager(BaseUserManager):
         extra.setdefault("is_staff", True)
         extra.setdefault("is_superuser", True)
         return self.create_user(email, password, **extra)
+
 
 class User(AbstractBaseUser, PermissionsMixin):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -54,14 +56,20 @@ class UserRole(models.Model):
         unique_together = ("user", "role")
 
 
+# accounts/models.py
 class CoachProfile(models.Model):
-    user = models.OneToOneField("accounts.User", on_delete=models.CASCADE, primary_key=True, related_name="coach_profile")
-    certification_level = models.CharField(max_length=80, blank=True)
-    years_experience = models.PositiveIntegerField(default=0)
+    user = models.OneToOneField("accounts.User", on_delete=models.CASCADE, related_name="coach_profile")
+    certificate_image = models.ImageField(upload_to="coach_certificates/", null=True, blank=True)
+    approval_status = models.CharField(max_length=20, default="pending")  # pending/approved/rejected
+    approved_at = models.DateTimeField(null=True, blank=True)
+    approved_by = models.ForeignKey("accounts.User", null=True, blank=True, on_delete=models.SET_NULL,
+                                    related_name="approved_coaches")
+    rejection_reason = models.TextField(blank=True)
 
 
 class PlayerProfile(models.Model):
-    user = models.OneToOneField("accounts.User", on_delete=models.CASCADE, primary_key=True, related_name="player_profile")
+    user = models.OneToOneField("accounts.User", on_delete=models.CASCADE, primary_key=True,
+                                related_name="player_profile")
 
     # one coach has many players
     coach = models.ForeignKey(
@@ -80,9 +88,11 @@ class PlayerProfile(models.Model):
     privacy_consents = models.JSONField(default=dict, blank=True)
 
     # team is in organizations app; use string ref to avoid circular imports
-    team = models.ForeignKey("organizations.Team", on_delete=models.SET_NULL, null=True, blank=True, related_name="players")
+    team = models.ForeignKey("organizations.Team", on_delete=models.SET_NULL, null=True, blank=True,
+                             related_name="players")
 
 
 class ManagerProfile(models.Model):
-    user = models.OneToOneField("accounts.User", on_delete=models.CASCADE, primary_key=True, related_name="manager_profile")
+    user = models.OneToOneField("accounts.User", on_delete=models.CASCADE, primary_key=True,
+                                related_name="manager_profile")
     club = models.ForeignKey("organizations.Club", on_delete=models.CASCADE, related_name="managers")
