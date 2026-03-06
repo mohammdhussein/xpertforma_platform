@@ -1,9 +1,10 @@
 from datetime import timedelta
+from django.db import transaction
 from django.db.models import Count
 from django.shortcuts import get_object_or_404
 from django.utils.dateparse import parse_date
 
-from rest_framework import status, viewsets
+from rest_framework import status, viewsets, serializers
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.decorators import action
@@ -44,12 +45,154 @@ class CoachTrainingPlanViewSet(viewsets.ModelViewSet):
         return TrainingPlanDetailSerializer
 
     def create(self, request, *args, **kwargs):
-        # Create DRAFT plan and return plan_id for wizard step 2
-        serializer = TrainingPlanCreateSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
+        """
+        Single endpoint to:
+        - create training plan
+        - create all sessions
+        - assign players
 
-        plan = serializer.save(creator=request.user, status="draft")
-        return Response(TrainingPlanDetailSerializer(plan).data, status=status.HTTP_201_CREATED)
+        Expected JSON body:
+        {
+          "title": "Pre-season Plan",
+          "start_date": "2026-03-10",
+          "end_date": "2026-03-20",
+          "sessions": [
+            {
+              "date": "2026-03-10",
+              "title": "Warm-up & cardio",
+              "start_time": "10:00",
+              "end_time": "11:00",
+              "notes": "Light session"
+            },
+            ...
+          ],
+          "assignee_players": [
+            { "id": "<uuid>" },
+            ...
+          ]
+        }
+        """
+        # 1) validate plan fields (no DB write yet)
+        plan_payload = {
+            "title": request.data.get("title"),
+            "start_date": request.data.get("start_date"),
+            "end_date": request.data.get("end_date"),
+        }
+        plan_serializer = TrainingPlanCreateSerializer(data=plan_payload)
+        plan_serializer.is_valid(raise_exception=True)
+        validated_plan = plan_serializer.validated_data
+        start_date = validated_plan["start_date"]
+        end_date = validated_plan["end_date"]
+
+        # 2) validate and normalize sessions (no DB write yet)
+        sessions = request.data.get("sessions") or []
+        if not isinstance(sessions, list):
+            raise serializers.ValidationError({"detail": "sessions must be a list."})
+
+        normalized_sessions = []
+        for sess in sessions:
+            day_str = sess.get("date")
+            if not day_str:
+                raise serializers.ValidationError(
+                    {"detail": "Each session must include a 'date' field."}
+                )
+
+            d = parse_date(day_str)
+            if not d:
+                raise serializers.ValidationError(
+                    {"detail": f"Invalid session date format: {day_str}. Use YYYY-MM-DD."}
+                )
+
+            # validate within plan range using validated start/end
+            if d < start_date or d > end_date:
+                raise serializers.ValidationError(
+                    {"detail": f"Session date {day_str} is outside plan date range."}
+                )
+
+            # validate time/title/notes via existing serializer
+            session_payload = {
+                "title": sess.get("title", ""),
+                "start_time": sess.get("start_time"),
+                "end_time": sess.get("end_time"),
+                "notes": sess.get("notes", ""),
+            }
+            s = SessionCreateSerializer(data=session_payload)
+            s.is_valid(raise_exception=True)
+            v = s.validated_data
+            normalized_sessions.append(
+                {
+                    "session_date": d,
+                    "title": v.get("title", ""),
+                    "start_time": v.get("start_time"),
+                    "end_time": v.get("end_time"),
+                    "notes": v.get("notes", ""),
+                }
+            )
+
+        # 3) validate assignee players (no DB write yet)
+        assignee_players = request.data.get("assignee_players") or []
+        if not isinstance(assignee_players, list):
+            raise serializers.ValidationError({"detail": "assignee_players must be a list."})
+
+        player_ids_raw = []
+        for item in assignee_players:
+            if not isinstance(item, dict) or "id" not in item:
+                raise serializers.ValidationError(
+                    {"detail": "Each assignee_players item must be an object with an 'id' field."}
+                )
+            player_ids_raw.append(item["id"])
+
+        allowed_ids = set()
+        if player_ids_raw:
+            assign_serializer = AssignPlayersSerializer(data={"player_ids": player_ids_raw})
+            assign_serializer.is_valid(raise_exception=True)
+            requested_ids = set(assign_serializer.validated_data["player_ids"])
+
+            # only allow assigning your own players
+            allowed_ids = set(
+                request.user.coached_players.filter(user_id__in=requested_ids).values_list("user_id", flat=True)
+            )
+
+        # 4) perform DB writes atomically
+        with transaction.atomic():
+            # create plan
+            plan = plan_serializer.save(creator=request.user, status="draft")
+
+            # create sessions
+            created_sessions = []
+            for sess in normalized_sessions:
+                session = TrainingSession.objects.create(
+                    plan=plan,
+                    session_date=sess["session_date"],
+                    title=sess["title"],
+                    start_time=sess["start_time"],
+                    end_time=sess["end_time"],
+                    notes=sess["notes"],
+                )
+                created_sessions.append(session)
+
+            # create player assignments
+            if allowed_ids:
+                TrainingPlanPlayer.objects.bulk_create(
+                    [
+                        TrainingPlanPlayer(plan=plan, player_id=pid, assigned_by=request.user)
+                        for pid in allowed_ids
+                    ]
+                )
+
+        # 5) build response
+        plan_data = TrainingPlanDetailSerializer(plan).data
+        sessions_data = TrainingSessionSerializer(created_sessions, many=True).data
+
+        return Response(
+            {
+                "message": "Training plan (with sessions and players) created successfully.",
+                "plan": plan_data,
+                "sessions": sessions_data,
+                "assigned_player_ids": [str(pid) for pid in allowed_ids],
+            },
+            status=status.HTTP_201_CREATED,
+        )
 
     def partial_update(self, request, *args, **kwargs):
         plan = self.get_object()
@@ -58,176 +201,6 @@ class CoachTrainingPlanViewSet(viewsets.ModelViewSet):
         serializer.save()
         return Response(TrainingPlanDetailSerializer(plan).data, status=200)
 
-    # -------- Stage 2: Days list (computed) --------
-    @action(detail=True, methods=["get"], url_path="days")
-    def days(self, request, plan_id=None):
-        plan = self.get_object()
 
-        # Count sessions per day
-        counts = (
-            TrainingSession.objects
-            .filter(plan=plan)
-            .values("session_date")
-            .annotate(c=Count("session_id"))
-        )
-        count_map = {str(x["session_date"]): x["c"] for x in counts}
 
-        days = []
-        for d in _daterange(plan.start_date, plan.end_date):
-            ds = str(d)
-            days.append({
-                "date": ds,
-                "weekday": d.strftime("%A"),
-                "sessions_count": count_map.get(ds, 0),
-            })
-
-        total_sessions = sum(x["sessions_count"] for x in days)
-        return Response({
-            "plan_id": str(plan.plan_id),
-            "start_date": str(plan.start_date),
-            "end_date": str(plan.end_date),
-            "days": days,
-            "total_sessions": total_sessions,
-        })
-
-    # -------- Stage 2: Add sessions for a specific day (date comes from URL) --------
-    @action(detail=True, methods=["get", "post"], url_path=r"days/(?P<day>\d{4}-\d{2}-\d{2})/sessions")
-    def sessions_for_day(self, request, plan_id=None, day=None):
-        plan = self.get_object()
-
-        d = parse_date(day)
-        if not d:
-            return Response({"detail": "Invalid date format. Use YYYY-MM-DD."}, status=400)
-
-        # validate date inside plan range
-        if d < plan.start_date or d > plan.end_date:
-            return Response({"detail": "Day is outside plan date range."}, status=400)
-
-        if request.method == "GET":
-            qs = TrainingSession.objects.filter(plan=plan, session_date=d).order_by("start_time")
-            return Response(TrainingSessionSerializer(qs, many=True).data)
-
-        # POST create session where session_date is FROM URL
-        s = SessionCreateSerializer(data=request.data)
-        s.is_valid(raise_exception=True)
-        data = s.validated_data
-
-        session = TrainingSession.objects.create(
-            plan=plan,
-            session_date=d,                  # ✅ from URL
-            title=data.get("title", ""),
-            start_time=data.get("start_time", None),
-            end_time=data.get("end_time", None),
-            notes=data.get("notes", ""),
-        )
-
-        return Response(TrainingSessionSerializer(session).data, status=201)
-
-    # Optional: edit/delete a session (coach only, must own the plan)
-    @action(detail=True, methods=["patch", "delete"], url_path=r"sessions/(?P<session_id>[0-9a-f-]{36})")
-    def edit_session(self, request, plan_id=None, session_id=None):
-        plan = self.get_object()
-        session = get_object_or_404(TrainingSession, session_id=session_id, plan=plan)
-
-        if request.method == "DELETE":
-            session.delete()
-            return Response(status=204)
-
-        # PATCH
-        s = SessionCreateSerializer(data=request.data, partial=True)
-        s.is_valid(raise_exception=True)
-        for k, v in s.validated_data.items():
-            setattr(session, k, v)
-        session.save()
-        return Response(TrainingSessionSerializer(session).data, status=200)
-
-    # -------- Stage 3: list coach players for checkbox list --------
-    @action(detail=False, methods=["get"], url_path="players")
-    def coach_players(self, request):
-        # get PlayerProfiles for this coach
-        profiles = (
-            PlayerProfile.objects
-            .filter(coach=request.user)
-            .select_related("user")
-        )
-
-        result = []
-        for pp in profiles:
-            result.append({
-                "id": str(pp.user.id),
-                "name": pp.user.name,
-                "position": pp.position,
-            })
-
-        return Response(result)
-
-    # -------- Stage 3: assign players (bulk) --------
-    @action(detail=True, methods=["get", "post"], url_path="assignments")
-    def assignments(self, request, plan_id=None):
-        plan = self.get_object()
-
-        if request.method == "GET":
-            ids = list(
-                TrainingPlanPlayer.objects.filter(plan=plan).values_list("player_id", flat=True)
-            )
-            return Response({"plan_id": str(plan.plan_id), "player_ids": [str(x) for x in ids]})
-
-        s = AssignPlayersSerializer(data=request.data)
-        s.is_valid(raise_exception=True)
-        requested_ids = set(s.validated_data["player_ids"])
-
-        # only allow assigning your own players (Coach 1:N Players rule)
-        allowed_ids = set(
-            request.user.coached_players.filter(user_id__in=requested_ids).values_list("user_id", flat=True)
-        )
-
-        # strategy: make DB match exactly what's sent (checkbox save)
-        # 1) delete assignments not in allowed_ids
-        TrainingPlanPlayer.objects.filter(plan=plan).exclude(player_id__in=allowed_ids).delete()
-
-        # 2) create missing assignments
-        existing = set(
-            TrainingPlanPlayer.objects.filter(plan=plan, player_id__in=allowed_ids)
-            .values_list("player_id", flat=True)
-        )
-
-        to_create = allowed_ids - existing
-        TrainingPlanPlayer.objects.bulk_create([
-            TrainingPlanPlayer(plan=plan, player_id=pid, assigned_by=request.user)
-            for pid in to_create
-        ])
-
-        return Response({
-            "plan_id": str(plan.plan_id),
-            "assigned_players": TrainingPlanPlayer.objects.filter(plan=plan).count()
-        }, status=200)
-
-    # -------- Summary for Step 3 card --------
-    @action(detail=True, methods=["get"], url_path="summary")
-    def summary(self, request, plan_id=None):
-        plan = self.get_object()
-        total_sessions = TrainingSession.objects.filter(plan=plan).count()
-        assigned_players = TrainingPlanPlayer.objects.filter(plan=plan).count()
-
-        return Response({
-            "plan_id": str(plan.plan_id),
-            "title": plan.title,
-            "start_date": str(plan.start_date),
-            "end_date": str(plan.end_date),
-            "total_sessions": total_sessions,
-            "assigned_players": assigned_players,
-            "status": plan.status,
-        })
-
-    # -------- Finish wizard --------
-    @action(detail=True, methods=["post"], url_path="publish")
-    def publish(self, request, plan_id=None):
-        plan = self.get_object()
-
-        # optional rules (you can relax these)
-        if TrainingSession.objects.filter(plan=plan).count() == 0:
-            return Response({"detail": "Add at least one session before publishing."}, status=400)
-
-        plan.status = "published"
-        plan.save(update_fields=["status"])
-        return Response({"plan_id": str(plan.plan_id), "status": plan.status}, status=200)
+    
