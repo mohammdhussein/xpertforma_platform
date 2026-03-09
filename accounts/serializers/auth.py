@@ -27,6 +27,7 @@ class CoachRegisterSerializer(serializers.Serializer):
         )
         return user
 
+
 class LoginTokenOnlySerializer(TokenObtainPairSerializer):
     """
     Returns ONLY tokens (access/refresh),
@@ -34,20 +35,46 @@ class LoginTokenOnlySerializer(TokenObtainPairSerializer):
     """
 
     def validate(self, attrs):
+        """
+        Always return JWT tokens on valid credentials and include
+        role-specific status information for coaches/players.
+        """
         data = super().validate(attrs)  # authenticates user/password and builds tokens
         user = self.user
 
-        # If this user is a coach, require approval before allowing login
-        if hasattr(user, "coach_profile"):
-            status = user.coach_profile.approval_status
-            if status != "approved":
-                # you can customize messages per status
-                if status == "pending":
-                    raise serializers.ValidationError("Coach account is pending admin approval.")
-                if status == "rejected":
-                    reason = user.coach_profile.rejection_reason or "Your application was rejected."
-                    raise serializers.ValidationError(f"Coach account rejected: {reason}")
-                raise serializers.ValidationError("Coach account is not approved.")
+        # Determine user roles (e.g. Coach, Player)
+        role_names = set(
+            user.user_roles.values_list("role__role_name", flat=True)
+        )
+        is_coach = "Coach" in role_names
+        is_player = "Player" in role_names
 
-        # IMPORTANT: return tokens only (no user info)
+        # Coach status block
+        if is_coach and hasattr(user, "coach_profile"):
+            coach_profile = user.coach_profile
+            register_status = (coach_profile.approval_status or "").upper()
+            if register_status == "PENDING" or register_status == "REJECTED":
+                raise serializers.ValidationError({"register_status": "PENDING"})
+
+            data["coach_status"] = {
+                "register_status": register_status,
+            }
+
+        # Player status block
+        if is_player and hasattr(user, "player_profile"):
+            player_profile = user.player_profile
+            has_coach = bool(player_profile.coach_id)
+
+            raw_login_status = player_profile.login_status or "first_login"
+            # API-friendly value: "first-login" or "complete"
+            if raw_login_status == "first_login":
+                login_status = "first-login"
+            else:
+                login_status = raw_login_status
+
+            data["player_status"] = {
+                "has_coach": has_coach,
+                "login_status": login_status,
+            }
+
         return data
