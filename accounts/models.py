@@ -84,8 +84,7 @@ class PlayerProfile(models.Model):
     weight_kg = models.FloatField(null=True, blank=True)
     position = models.CharField(max_length=40, blank=True)
     fitness_level = models.CharField(max_length=40, blank=True)
-    dietary_prefs = models.CharField(max_length=200, blank=True)
-    privacy_consents = models.JSONField(default=dict, blank=True)
+    login_status = models.CharField(max_length=20, default="first_login")
 
     # team is in organizations app; use string ref to avoid circular imports
     team = models.ForeignKey("organizations.Team", on_delete=models.SET_NULL, null=True, blank=True,
