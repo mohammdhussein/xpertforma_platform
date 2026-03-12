@@ -136,3 +136,10 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 AUTH_USER_MODEL = "accounts.User"
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_HOST = "smtp.gmail.com"
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = "momo.hussein.king@gmail.com"
+EMAIL_HOST_PASSWORD = 'bgdq gyuo uycz pkgi'  # not your normal password
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
