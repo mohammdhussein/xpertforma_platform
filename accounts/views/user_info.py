@@ -55,8 +55,7 @@ class UserInfoAPIView(APIView):
             "id": user.id,
             "name": user.name,
             "email": user.email,
-            "roles": roles if roles else ["User"],
-            "primary_role": primary,
+            "role": primary,
             "coach": coach_data,
             "player": player_data,
         }
