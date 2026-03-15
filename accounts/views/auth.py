@@ -1,10 +1,13 @@
+import time
+
+from django.core.cache import cache
 from rest_framework.views import APIView
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
 from accounts.serializers.auth import CoachRegisterSerializer
-from rest_framework_simplejwt.views import TokenObtainPairView
-from accounts.serializers.auth import LoginTokenOnlySerializer
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+from accounts.serializers.auth import LoginTokenOnlySerializer, RefreshTokenSerializer
 
 
 class CoachRegisterAPIView(APIView):
@@ -26,3 +29,19 @@ class CoachRegisterAPIView(APIView):
 
 class LoginAPIView(TokenObtainPairView):
     serializer_class = LoginTokenOnlySerializer
+
+
+class RefreshAPIView(TokenRefreshView):
+    serializer_class = RefreshTokenSerializer
+
+
+class LogoutAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        access_token = request.auth
+        jti = access_token["jti"]
+        ttl = max(int(access_token["exp"]) - int(time.time()), 0)
+        if ttl > 0:
+            cache.set(f"blacklisted_jti_{jti}", True, timeout=ttl)
+        return Response(status=status.HTTP_205_RESET_CONTENT)
