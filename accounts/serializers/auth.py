@@ -1,7 +1,16 @@
+import datetime
+
 from rest_framework import serializers
+
+
+def _access_expires_at(access_token_str):
+    exp = AccessToken(access_token_str)["exp"]
+    dt = datetime.datetime.fromtimestamp(exp, tz=datetime.timezone.utc)
+    return dt.strftime("%Y-%m-%dT%H:%M:%SZ")
 from django.db import transaction
 from accounts.models import User, Role, UserRole, CoachProfile
-from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer, TokenRefreshSerializer
+from rest_framework_simplejwt.tokens import AccessToken
 
 
 class CoachRegisterSerializer(serializers.Serializer):
@@ -77,4 +86,12 @@ class LoginTokenOnlySerializer(TokenObtainPairSerializer):
                 "login_status": login_status,
             }
 
+        data["access_expires_at"] = _access_expires_at(data["access"])
+        return data
+
+
+class RefreshTokenSerializer(TokenRefreshSerializer):
+    def validate(self, attrs):
+        data = super().validate(attrs)
+        data["access_expires_at"] = _access_expires_at(data["access"])
         return data
