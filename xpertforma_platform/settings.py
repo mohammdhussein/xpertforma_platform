@@ -12,6 +12,9 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 
 from pathlib import Path
 from datetime import timedelta
+import os
+from pathlib import Path
+import dj_database_url
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -78,15 +81,32 @@ WSGI_APPLICATION = 'xpertforma_platform.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
+
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-key")
+DEBUG = os.getenv("DEBUG", "False") == "True"
+
+ALLOWED_HOSTS = [
+    "127.0.0.1",
+    "localhost",
+    ".onrender.com",
+]
+
+CSRF_TRUSTED_ORIGINS = [
+    "https://*.onrender.com",
+]
+
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'xpertforma_db',
-        'HOST': 'localhost',
-        'USER': 'postgres',
-        'PASSWORD': '123456',
-    }
+    "default": dj_database_url.parse(os.environ["DATABASE_URL"])
 }
+
+STATIC_URL = "/static/"
+STATIC_ROOT = BASE_DIR / "staticfiles"
+
+MEDIA_URL = "/media/"
+MEDIA_ROOT = BASE_DIR / "media"
 
 
 # Password validation
