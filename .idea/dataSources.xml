@@ -8,5 +8,12 @@
       <jdbc-url>jdbc:postgresql://localhost:5432/xpertforma_db</jdbc-url>
       <working-dir>$ProjectFileDir$</working-dir>
     </data-source>
+    <data-source source="LOCAL" name="Render XpertForma DB" uuid="6fe0482e-42ed-47f1-ab59-56e144231507">
+      <driver-ref>postgresql</driver-ref>
+      <synchronize>true</synchronize>
+      <jdbc-driver>org.postgresql.Driver</jdbc-driver>
+      <jdbc-url>jdbc:postgresql://dpg-d6rha814tr6s73898seg-a.oregon-postgres.render.com:5432/xpertforma_db</jdbc-url>
+      <working-dir>$ProjectFileDir$</working-dir>
+    </data-source>
   </component>
 </project>
