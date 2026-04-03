@@ -25,6 +25,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
+# Environment helpers
+def _split_env_list(var_name: str) -> list[str]:
+    value = os.getenv(var_name, "")
+    return [item.strip() for item in value.split(",") if item.strip()]
+
+
 # Application definition
 
 INSTALLED_APPS = [
@@ -42,6 +48,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -79,16 +86,27 @@ WSGI_APPLICATION = 'xpertforma_platform.wsgi.application'
 
 SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-key")
 DEBUG = os.getenv("DEBUG", "False") == "True"
+RENDER_EXTERNAL_HOSTNAME = os.getenv("RENDER_EXTERNAL_HOSTNAME")
+EXTRA_ALLOWED_HOSTS = _split_env_list("ALLOWED_HOSTS_EXTRA")
+EXTRA_CSRF_TRUSTED_ORIGINS = _split_env_list("CSRF_TRUSTED_ORIGINS_EXTRA")
 
 ALLOWED_HOSTS = [
     "127.0.0.1",
     "localhost",
     ".onrender.com",
+    *EXTRA_ALLOWED_HOSTS,
 ]
+
+if RENDER_EXTERNAL_HOSTNAME:
+    ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
 
 CSRF_TRUSTED_ORIGINS = [
     "https://*.onrender.com",
+    *EXTRA_CSRF_TRUSTED_ORIGINS,
 ]
+
+if RENDER_EXTERNAL_HOSTNAME:
+    CSRF_TRUSTED_ORIGINS.append(f"https://{RENDER_EXTERNAL_HOSTNAME}")
 
 DATABASES = {
     "default": dj_database_url.parse(
@@ -98,6 +116,18 @@ DATABASES = {
 
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
+STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": (
+            "whitenoise.storage.CompressedManifestStaticFilesStorage"
+            if not DEBUG
+            else "django.contrib.staticfiles.storage.StaticFilesStorage"
+        ),
+    },
+}
 
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
@@ -149,7 +179,6 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
-STATIC_URL = 'static/'
 AUTH_USER_MODEL = "accounts.User"
 EMAIL_BACKEND = os.getenv(
     "EMAIL_BACKEND",

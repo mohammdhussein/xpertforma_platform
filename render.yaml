@@ -1,0 +1,25 @@
+databases:
+  - name: xpertforma-db
+    plan: free
+    databaseName: xpertforma_db
+    user: xpertforma_user
+
+services:
+  - type: web
+    name: xpertforma-platform
+    runtime: python
+    plan: free
+    buildCommand: bash build.sh
+    preDeployCommand: python manage.py migrate
+    startCommand: gunicorn xpertforma_platform.wsgi:application
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: xpertforma-db
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DEBUG
+        value: "False"
+      - key: WEB_CONCURRENCY
+        value: "4"
