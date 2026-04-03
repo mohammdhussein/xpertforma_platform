@@ -40,6 +40,15 @@ class TrainingPlan(models.Model):
 
 
 class TrainingSession(models.Model):
+    SESSION_TYPE_GROUP = "group"
+    SESSION_TYPE_TEAM = "team"
+    SESSION_TYPE_INDIVIDUAL = "individual"
+    SESSION_TYPE_CHOICES = [
+        (SESSION_TYPE_GROUP, "Group"),
+        (SESSION_TYPE_TEAM, "Team"),
+        (SESSION_TYPE_INDIVIDUAL, "Individual"),
+    ]
+
     session_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
     plan = models.ForeignKey(
@@ -50,6 +59,11 @@ class TrainingSession(models.Model):
 
     title = models.CharField(max_length=120, blank=True)
     session_date = models.DateField()
+    session_type = models.CharField(
+        max_length=20,
+        choices=SESSION_TYPE_CHOICES,
+        default=SESSION_TYPE_GROUP,
+    )
     start_time = models.TimeField(null=True, blank=True)
     end_time = models.TimeField(null=True, blank=True)
     notes = models.TextField(blank=True)

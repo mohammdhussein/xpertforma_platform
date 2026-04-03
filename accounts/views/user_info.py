@@ -2,6 +2,7 @@ from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from accounts.serializers.position import build_position_payload
 from accounts.serializers.user_info import UserInfoSerializer
 
 
@@ -45,10 +46,11 @@ class UserInfoAPIView(APIView):
         if hasattr(user, "player_profile"):
             pp = user.player_profile
             player_data = {
-                "position": getattr(pp, "position", None),
+                "position": build_position_payload(pp.position, pp.position_label),
                 "team_id": str(pp.team_id) if getattr(pp, "team_id", None) else None,
                 "height_cm": getattr(pp, "height_cm", None),
                 "weight_kg": getattr(pp, "weight_kg", None),
+                "avatar_url": pp.avatar.url if getattr(pp, "avatar", None) else None,
             }
 
         payload = {

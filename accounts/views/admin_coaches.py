@@ -9,7 +9,7 @@ class PendingCoachesAPIView(APIView):
     permission_classes = [IsAuthenticated, IsAdminUser]
 
     def get(self, request):
-        qs = CoachProfile.objects.filter(approval_status="pending").select_related("user")
+        qs = CoachProfile.objects.filter(approval_status="PENDING").select_related("user")
         return Response([{
             "coach_id": str(x.user.id),
             "name": x.user.name,
@@ -22,12 +22,12 @@ class ApproveCoachAPIView(APIView):
 
     def post(self, request, coach_id):
         cp = get_object_or_404(CoachProfile, user_id=coach_id)
-        cp.approval_status = "approved"
+        cp.approval_status = "APPROVED"
         cp.approved_at = timezone.now()
         cp.approved_by = request.user
         cp.rejection_reason = ""
         cp.save()
-        return Response({"coach_id": str(coach_id), "status": "approved"})
+        return Response({"coach_id": str(coach_id), "status": "APPROVED"})
 
 class RejectCoachAPIView(APIView):
     permission_classes = [IsAuthenticated, IsAdminUser]

@@ -1,5 +1,7 @@
 from rest_framework import serializers
 
+from accounts.serializers.position import PositionSummarySerializer
+
 
 class CoachDashboardStatsSerializer(serializers.Serializer):
     total_players = serializers.IntegerField()
@@ -10,7 +12,7 @@ class CoachDashboardStatsSerializer(serializers.Serializer):
 class CoachDashboardPlayerCardSerializer(serializers.Serializer):
     id = serializers.UUIDField()
     name = serializers.CharField()
-    position = serializers.CharField(allow_blank=True)
+    position = PositionSummarySerializer()
     last_activity = serializers.DateTimeField(allow_null=True)
     avatar_url = serializers.CharField(allow_null=True)
 

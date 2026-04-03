@@ -35,7 +35,7 @@ class IsApprovedCoach(BasePermission):
             return False
 
         # Must be approved
-        if user.coach_profile.approval_status != "approved":
+        if user.coach_profile.approval_status != "APPROVED":
             return False
 
         return True

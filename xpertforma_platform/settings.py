@@ -46,6 +46,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'accounts.middleware.UpdateLastSeenMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
@@ -150,10 +151,16 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 AUTH_USER_MODEL = "accounts.User"
-EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-EMAIL_HOST = "smtp.gmail.com"
-EMAIL_PORT = 587
-EMAIL_USE_TLS = True
-EMAIL_HOST_USER = "momo.hussein.king@gmail.com"
-EMAIL_HOST_PASSWORD = 'bgdq gyuo uycz pkgi'  # not your normal password
-DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+EMAIL_BACKEND = os.getenv(
+    "EMAIL_BACKEND",
+    "django.core.mail.backends.smtp.EmailBackend",
+)
+EMAIL_HOST = os.getenv("EMAIL_HOST", "smtp.gmail.com")
+EMAIL_PORT = int(os.getenv("EMAIL_PORT", "587"))
+EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS", "True") == "True"
+EMAIL_USE_SSL = os.getenv("EMAIL_USE_SSL", "False") == "True"
+EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "momo.hussein.king@gmail.com")
+EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "bgdq gyuo uycz pkgi")
+EMAIL_TIMEOUT = int(os.getenv("EMAIL_TIMEOUT", "5"))
+DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", EMAIL_HOST_USER or "no-reply@example.com")
+PLAYER_INVITE_DEEP_LINK_BASE = os.getenv("PLAYER_INVITE_DEEP_LINK_BASE", "http://localhost:3000/set-password")
