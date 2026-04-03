@@ -8,17 +8,10 @@ from rest_framework.response import Response
 
 from accounts.permissions import IsCoach
 from accounts.models import PlayerProfile
+from accounts.serializers.position import build_position_payload
 from training.models import TrainingPlanPlayer, TrainingSession, PlayerSessionProgress
 
 from accounts.serializers import PlayerListResponseSerializer, PlayerTrainingProgressResponseSerializer
-
-
-def _paginate(qs, page, page_size):
-    page = max(int(page), 1)
-    page_size = min(max(int(page_size), 1), 50)
-    start = (page - 1) * page_size
-    end = start + page_size
-    return qs[start:end], page, page_size
 
 
 class CoachPlayersListAPIView(APIView):
@@ -31,66 +24,34 @@ class CoachPlayersListAPIView(APIView):
         coach = request.user
         q = (request.query_params.get("q") or "").strip()
         tab = (request.query_params.get("tab") or "all").strip()
-        page = request.query_params.get("page") or 1
-        page_size = request.query_params.get("page_size") or 10
 
-        base = PlayerProfile.objects.filter(coach=coach).select_related("user")
+        base = PlayerProfile.objects.filter(coach=coach).select_related("user", "position")
 
         if q:
             base = base.filter(
                 Q(user__name__icontains=q) |
                 Q(user__email__icontains=q) |
-                Q(position__icontains=q)
+                Q(position__name__icontains=q) |
+                Q(position__code__icontains=q) |
+                Q(position_label__icontains=q)
             )
 
         has_state = hasattr(PlayerProfile, "player_state")
         if tab != "all" and has_state:
             base = base.filter(player_state=tab)
 
-        counts = {"all": PlayerProfile.objects.filter(coach=coach).count()}
-        if has_state:
-            counts["active"] = PlayerProfile.objects.filter(coach=coach, player_state="active").count()
-            counts["needs_review"] = PlayerProfile.objects.filter(coach=coach, player_state="needs_review").count()
-            counts["injured"] = PlayerProfile.objects.filter(coach=coach, player_state="injured").count()
-        else:
-            counts.update({"active": 0, "needs_review": 0, "injured": 0})
-
-        base = base.order_by("user__name")
-        page_qs, page, page_size = _paginate(base, page, page_size)
-
-        player_ids = [pp.user_id for pp in page_qs]
-
-        # collect assigned plan titles per player
-        tpp = (
-            TrainingPlanPlayer.objects
-            .filter(player_id__in=player_ids)
-            .select_related("plan")
-            .order_by("-assigned_at")
-        )
-
-        plans_by_player = {}
-        for row in tpp:
-            plans_by_player.setdefault(row.player_id, [])
-            if row.plan.title not in plans_by_player[row.player_id]:
-                plans_by_player[row.player_id].append(row.plan.title)
-
-        results = []
-        for pp in page_qs:
-            titles = plans_by_player.get(pp.user_id, [])
-            first_two = titles[:2]
-            more = max(len(titles) - 2, 0)
+        players = []
+        for pp in base.order_by("user__name"):
             state = getattr(pp, "player_state", "active")
 
-            results.append({
+            players.append({
                 "id": pp.user.id,
                 "name": pp.user.name,
-                "position": pp.position or "",
+                "position": build_position_payload(pp.position, pp.position_label),
                 "state": state,
-                "plan_chips": first_two,
-                "more_plans_count": more,
             })
 
-        payload = {"counts": counts, "results": results, "page": page, "page_size": page_size}
+        payload = {"players": players}
         return Response(PlayerListResponseSerializer(payload).data)
 
 
@@ -104,7 +65,7 @@ class CoachPlayerTrainingProgressAPIView(APIView):
         coach = request.user
 
         pp = get_object_or_404(
-            PlayerProfile.objects.select_related("user"),
+            PlayerProfile.objects.select_related("user", "position"),
             user_id=player_id,
             coach=coach
         )
@@ -158,12 +119,10 @@ class CoachPlayerTrainingProgressAPIView(APIView):
             })
 
         payload = {
-            "player": {
-                "id": player.id,
-                "name": player.name,
-                "age": getattr(pp, "age", None),
-                "position": pp.position or "",
-            },
+            "id": player.id,
+            "name": player.name,
+            "age": getattr(pp, "age", None),
+            "position": build_position_payload(pp.position, pp.position_label),
             "plans": plans_out
         }
 

@@ -6,5 +6,5 @@ from accounts.views_coach_players import (
 
 urlpatterns = [
     path("coach/players/", CoachPlayersListAPIView.as_view()),
-    path("coach/players/<uuid:player_id>/training-progress/", CoachPlayerTrainingProgressAPIView.as_view()),
+    path("coach/players/<uuid:player_id>/", CoachPlayerTrainingProgressAPIView.as_view()),
 ]

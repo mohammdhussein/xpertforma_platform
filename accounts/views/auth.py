@@ -7,7 +7,11 @@ from rest_framework.response import Response
 from rest_framework import status
 from accounts.serializers.auth import CoachRegisterSerializer
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
-from accounts.serializers.auth import LoginTokenOnlySerializer, RefreshTokenSerializer
+from accounts.serializers.auth import (
+    LoginTokenOnlySerializer,
+    PlayerSetPasswordSerializer,
+    RefreshTokenSerializer,
+)
 
 
 class CoachRegisterAPIView(APIView):
@@ -45,3 +49,20 @@ class LogoutAPIView(APIView):
         if ttl > 0:
             cache.set(f"blacklisted_jti_{jti}", True, timeout=ttl)
         return Response(status=status.HTTP_205_RESET_CONTENT)
+
+
+class PlayerSetPasswordAPIView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        serializer = PlayerSetPasswordSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.save()
+        return Response(
+            {
+                "id": str(user.id),
+                "email": user.email,
+                "message": "Password set successfully.",
+            },
+            status=status.HTTP_200_OK,
+        )

@@ -1,6 +1,6 @@
 from datetime import timedelta, datetime
 from django.utils import timezone
-from django.db.models import Count, Q
+from django.db.models import Count
 
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
@@ -8,9 +8,12 @@ from rest_framework.response import Response
 
 from accounts.permissions import IsApprovedCoach
 from accounts.models import PlayerProfile
+from accounts.serializers.position import build_position_payload
 from training.models import TrainingPlanPlayer, TrainingSession
 
 from accounts.serializers.coach_dashboard import CoachDashboardSerializer
+
+UPCOMING_SESSIONS_LIMIT = 3
 
 
 def _duration_min(start_time, end_time):
@@ -40,7 +43,7 @@ class CoachDashboardAPIView(APIView):
             next_month = month_start.replace(month=month_start.month + 1)
 
         # total players (coach -> players)
-        players_qs = PlayerProfile.objects.filter(coach=coach).select_related("user")
+        players_qs = PlayerProfile.objects.filter(coach=coach).select_related("user", "position")
         total_players = players_qs.count()
 
         # get all assigned plans for coach players (so upcoming sessions can include those players)
@@ -67,12 +70,17 @@ class CoachDashboardAPIView(APIView):
         # If not, return null.
         my_players = []
         for pp in players_qs.order_by("user__name")[:4]:
+            avatar_url = None
+            if getattr(pp, "avatar", None):
+                avatar_url = pp.avatar.url
+                if request is not None:
+                    avatar_url = request.build_absolute_uri(avatar_url)
             my_players.append({
                 "id": pp.user.id,
                 "name": pp.user.name,
-                "position": getattr(pp, "position", "") or "",
-                "last_activity": None,  # fill later if you track it
-                "avatar_url": getattr(pp, "avatar_url", None),
+                "position": build_position_payload(pp.position, pp.position_label),
+                "last_activity": pp.user.last_seen_at,
+                "avatar_url": avatar_url,
             })
 
         # upcoming sessions (next 7 days)
@@ -80,14 +88,14 @@ class CoachDashboardAPIView(APIView):
             TrainingSession.objects
             .filter(plan_id__in=plan_ids, session_date__gte=today, session_date__lte=today + timedelta(days=7))
             .select_related("plan")
-            .order_by("session_date", "start_time")[:6]
+            .order_by("session_date", "start_time")[:UPCOMING_SESSIONS_LIMIT]
         )
 
         # players_count per session:
         # since sessions belong to plan, count assigned players to that plan
         players_count_map = dict(
             TrainingPlanPlayer.objects
-            .filter(plan_id__in=[s.plan_id for s in upcoming])
+            .filter(plan_id__in=[s.plan_id for s in upcoming], player_id__in=player_ids)
             .values("plan_id")
             .annotate(c=Count("player_id", distinct=True))
             .values_list("plan_id", "c")
@@ -101,7 +109,7 @@ class CoachDashboardAPIView(APIView):
                 "title": (s.title or s.plan.title),
                 "session_date": s.session_date,
                 "start_time": s.start_time,
-                "session_type": "group",  # you can add field later; default group
+                "session_type": s.session_type,
                 "players_count": players_count_map.get(s.plan_id, 0),
                 "duration_min": _duration_min(s.start_time, s.end_time),
             })
