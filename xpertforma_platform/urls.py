@@ -14,9 +14,21 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
+from pathlib import Path
+
+from django.conf import settings
 from django.contrib import admin
+from django.http import FileResponse
 from django.urls import path, include
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+
+
+def api_reference_view(request):
+    return FileResponse(
+        open(Path(settings.BASE_DIR) / "api-reference.html", "rb"),
+        content_type="text/html",
+    )
+
 
 urlpatterns = [
     path("api/auth/", include("accounts.urls.auth")),
@@ -28,4 +40,6 @@ urlpatterns = [
     path("api/", include("accounts.urls.urls")),
     path("api/", include("accounts.urls.coach_dashboard")),
     path("api/", include("accounts.urls.player_dashboard")),
+    path("api-reference/", api_reference_view),
+
 ]

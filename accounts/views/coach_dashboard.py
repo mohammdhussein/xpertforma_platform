@@ -24,6 +24,10 @@ def _duration_min(start_time, end_time):
     return max(int((end_dt - start_dt).total_seconds() // 60), 0)
 
 
+def _start_of_week_sunday(date_value):
+    return date_value - timedelta(days=(date_value.weekday() + 1) % 7)
+
+
 class CoachDashboardAPIView(APIView):
     permission_classes = [IsAuthenticated, IsApprovedCoach]
 
@@ -31,8 +35,8 @@ class CoachDashboardAPIView(APIView):
         coach = request.user
         today = timezone.localdate()
 
-        # week range (Mon..Sun)
-        week_start = today - timedelta(days=today.weekday())
+        # week range (Sun..Sat)
+        week_start = _start_of_week_sunday(today)
         week_end = week_start + timedelta(days=7)
 
         # month range
@@ -70,20 +74,16 @@ class CoachDashboardAPIView(APIView):
         # If not, return null.
         my_players = []
         for pp in players_qs.order_by("user__name")[:4]:
-            avatar_url = None
-            if getattr(pp, "avatar", None):
-                avatar_url = pp.avatar.url
-                if request is not None:
-                    avatar_url = request.build_absolute_uri(avatar_url)
             my_players.append({
                 "id": pp.user.id,
                 "name": pp.user.name,
                 "position": build_position_payload(pp.position, pp.position_label),
                 "last_activity": pp.user.last_seen_at,
-                "avatar_url": avatar_url,
+                "avatar_url": pp.avatar,
             })
 
-        # upcoming sessions (next 7 days)
+            # upcoming sessions (next 7 days)
+
         upcoming = (
             TrainingSession.objects
             .filter(plan_id__in=plan_ids, session_date__gte=today, session_date__lte=today + timedelta(days=7))

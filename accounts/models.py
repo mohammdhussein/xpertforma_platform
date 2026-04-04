@@ -1,4 +1,5 @@
 import uuid
+from django.conf import settings
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, BaseUserManager
 
@@ -109,3 +110,35 @@ class ManagerProfile(models.Model):
     user = models.OneToOneField("accounts.User", on_delete=models.CASCADE, primary_key=True,
                                 related_name="manager_profile")
     club = models.ForeignKey("organizations.Club", on_delete=models.CASCADE, related_name="managers")
+
+
+class PasswordSetupToken(models.Model):
+    PURPOSE_SET_PASSWORD = "set_password"
+    PURPOSE_CHOICES = (
+        (PURPOSE_SET_PASSWORD, "Set Password"),
+    )
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="password_setup_tokens",
+    )
+    token = models.CharField(max_length=64, unique=True)
+    purpose = models.CharField(
+        max_length=32,
+        choices=PURPOSE_CHOICES,
+        default=PURPOSE_SET_PASSWORD,
+    )
+    is_used = models.BooleanField(default=False)
+    expires_at = models.DateTimeField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["user", "purpose", "is_used"]),
+            models.Index(fields=["expires_at"]),
+        ]
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.user.email} - {self.purpose}"
