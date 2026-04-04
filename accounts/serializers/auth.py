@@ -1,16 +1,22 @@
 import datetime
 
 from django.contrib.auth.password_validation import validate_password
-from django.contrib.auth.tokens import default_token_generator
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import transaction
 from django.utils import timezone
-from django.utils.encoding import force_bytes
-from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer, TokenRefreshSerializer
 from rest_framework_simplejwt.tokens import AccessToken
 
 from accounts.models import User, Role, UserRole, CoachProfile
+from accounts.services.password_setup import (
+    ExpiredPasswordSetupTokenError,
+    InvalidPasswordSetupTokenError,
+    PasswordSetupUserNotFoundError,
+    UsedPasswordSetupTokenError,
+    complete_password_setup,
+    get_valid_password_setup_token,
+)
 
 
 def _access_expires_at(access_token_str):
@@ -115,39 +121,55 @@ class RefreshTokenSerializer(TokenRefreshSerializer):
         return data
 
 
-class PlayerSetPasswordSerializer(serializers.Serializer):
-    uid = serializers.CharField()
+def _password_setup_error_to_validation_error(exc):
+    if isinstance(exc, InvalidPasswordSetupTokenError):
+        return serializers.ValidationError({"token": str(exc)})
+    if isinstance(exc, ExpiredPasswordSetupTokenError):
+        return serializers.ValidationError({"token": str(exc)})
+    if isinstance(exc, UsedPasswordSetupTokenError):
+        return serializers.ValidationError({"token": str(exc)})
+    if isinstance(exc, PasswordSetupUserNotFoundError):
+        return serializers.ValidationError({"token": str(exc)})
+    raise exc
+
+
+class CompleteSetPasswordSerializer(serializers.Serializer):
     token = serializers.CharField()
     password = serializers.CharField(write_only=True, min_length=8)
 
     def validate(self, attrs):
         try:
-            user_id = urlsafe_base64_decode(attrs["uid"]).decode()
-            user = User.objects.get(pk=user_id)
-        except Exception as exc:
-            raise serializers.ValidationError({"uid": "Invalid user reference."}) from exc
+            token_record = get_valid_password_setup_token(attrs["token"])
+        except (
+            InvalidPasswordSetupTokenError,
+            ExpiredPasswordSetupTokenError,
+            UsedPasswordSetupTokenError,
+            PasswordSetupUserNotFoundError,
+        ) as exc:
+            raise _password_setup_error_to_validation_error(exc) from exc
 
-        if not default_token_generator.check_token(user, attrs["token"]):
-            raise serializers.ValidationError({"token": "Invalid or expired token."})
+        try:
+            validate_password(attrs["password"], user=token_record.user)
+        except DjangoValidationError as exc:
+            raise serializers.ValidationError({"password": list(exc.messages)}) from exc
 
-        validate_password(attrs["password"], user=user)
-        attrs["user"] = user
+        attrs["user"] = token_record.user
         return attrs
 
     def save(self, **kwargs):
-        user = self.validated_data["user"]
-        user.set_password(self.validated_data["password"])
-        user.save(update_fields=["password"])
-
-        if hasattr(user, "player_profile"):
-            user.player_profile.login_status = "complete"
-            user.player_profile.save(update_fields=["login_status"])
+        try:
+            user, _ = complete_password_setup(
+                self.validated_data["token"],
+                self.validated_data["password"],
+            )
+        except (
+            InvalidPasswordSetupTokenError,
+            ExpiredPasswordSetupTokenError,
+            UsedPasswordSetupTokenError,
+            PasswordSetupUserNotFoundError,
+        ) as exc:
+            raise _password_setup_error_to_validation_error(exc) from exc
+        except DjangoValidationError as exc:
+            raise serializers.ValidationError({"password": list(exc.messages)}) from exc
 
         return user
-
-
-def build_player_setup_token(user):
-    return {
-        "uid": urlsafe_base64_encode(force_bytes(user.pk)),
-        "token": default_token_generator.make_token(user),
-    }

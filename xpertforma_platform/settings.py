@@ -192,4 +192,9 @@ EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "momo.hussein.king@gmail.com")
 EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "bgdq gyuo uycz pkgi")
 EMAIL_TIMEOUT = int(os.getenv("EMAIL_TIMEOUT", "5"))
 DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", EMAIL_HOST_USER or "no-reply@example.com")
-PLAYER_INVITE_DEEP_LINK_BASE = os.getenv("PLAYER_INVITE_DEEP_LINK_BASE", "http://localhost:3000/set-password")
+#PLAYER_INVITE_DEEP_LINK_BASE = os.getenv("PLAYER_INVITE_DEEP_LINK_BASE", "http://localhost:3000/set-password")
+PASSWORD_SETUP_TOKEN_TTL_HOURS = int(os.getenv("PASSWORD_SETUP_TOKEN_TTL_HOURS", "24"))
+PASSWORD_SETUP_DEEP_LINK_BASE = os.getenv(
+    "PASSWORD_SETUP_DEEP_LINK_BASE",
+    os.getenv("PLAYER_INVITE_DEEP_LINK_BASE", "https://xpertforma-platform.onrender.com/set-password"),
+)

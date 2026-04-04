@@ -339,15 +339,14 @@
             </div>
         </div>
 
-        <div class="endpoint" data-search="POST /api/auth/player/set-password player set password uid token onboarding invite">
-            <div><span class="badge post">POST</span><span class="path">/api/auth/player/set-password/</span></div>
-            <p class="meta">Public. Completes invited player onboarding using UID and token.</p>
+        <div class="endpoint" data-search="POST /api/auth/complete-set-password complete set password token onboarding invite mobile deep link">
+            <div><span class="badge post">POST</span><span class="path">/api/auth/complete-set-password/</span></div>
+            <p class="meta">Public. Completes invited player onboarding using a one-time password setup token from the mobile deep link.</p>
             <div class="grid">
                 <div class="card">
                     <h4>Request Body</h4>
                     <pre>{
-  "uid": "base64-user-id",
-  "token": "password-reset-token",
+  "token": "one-time-password-setup-token",
   "password": "NewStrongPass123!"
 }</pre>
                 </div>
@@ -362,8 +361,9 @@
                 <div class="card">
                     <h4>Error Notes</h4>
                     <ul>
-                        <li><code>400</code> if <code>uid</code> is invalid</li>
-                        <li><code>400</code> if <code>token</code> is invalid or expired</li>
+                        <li><code>400</code> if <code>token</code> is invalid</li>
+                        <li><code>400</code> if <code>token</code> is expired or already used</li>
+                        <li><code>400</code> if the token purpose is invalid or its user cannot be resolved</li>
                         <li><code>400</code> if password validation fails</li>
                     </ul>
                 </div>
@@ -443,9 +443,9 @@
     <section class="section api-section" id="coach">
         <h2>Coach</h2>
 
-        <div class="endpoint" data-search="POST /api/coach/create-player coach create player position_id position deep_link invitation_sent conflict 409">
+        <div class="endpoint" data-search="POST /api/coach/create-player coach create player position_id position deep_link invitation_sent conflict 409 password setup">
             <div><span class="badge post">POST</span><span class="path">/api/coach/create-player/</span></div>
-            <p class="meta">Authenticated coach only. Creates a player, reassigns an existing player, or returns conflict if that player already belongs to the same coach.</p>
+            <p class="meta">Authenticated coach only. Creates a player, reassigns an existing player, and sends a password setup email with a one-time deep link when password setup is required.</p>
             <div class="grid">
                 <div class="card">
                     <h4>Request Body</h4>
@@ -469,9 +469,8 @@
   "created": true,
   "password_setup_required": true,
   "setup_password": {
-    "uid": "base64-user-id",
-    "token": "password-reset-token",
-    "deep_link": "xpertforma://set-password?uid=...&token=..."
+    "deep_link": "https://app.xpertforma.com/set-password?token=...",
+    "expires_at": "2026-04-05T14:00:00Z"
   },
   "invitation_sent": true
 }</pre>
@@ -481,6 +480,7 @@
                     <ul>
                         <li><code>409</code> if the same coach already has that player email</li>
                         <li><code>400</code> if the email belongs to a coach or manager account</li>
+                        <li><code>setup_password</code> is <code>null</code> when the player already has a usable password</li>
                     </ul>
                 </div>
             </div>
@@ -488,7 +488,7 @@
 
         <div class="endpoint" data-search="GET /api/coach/dashboard coach dashboard my_players position upcoming_sessions total_players sessions_this_week">
             <div><span class="badge get">GET</span><span class="path">/api/coach/dashboard/</span></div>
-            <p class="meta">Authenticated approved coach only. Dashboard summary with top 3 upcoming sessions.</p>
+            <p class="meta">Authenticated approved coach only. Dashboard summary with top 3 upcoming sessions. <code>sessions_this_week</code> is counted in a Sunday-to-Saturday window based on the server local date.</p>
             <div class="grid">
                 <div class="card">
                     <h4>Response 200</h4>
@@ -942,7 +942,7 @@
             <p class="meta">Authenticated. Returns the signed-in user profile summary and role-specific data.</p>
             <div class="grid">
                 <div class="card">
-                    <h4>Response 200</h4>
+                    <h4>Response 200: Player Example</h4>
                     <pre>{
   "id": "uuid",
   "name": "User Name",
@@ -958,6 +958,21 @@
     "height_cm": 182.0,
     "weight_kg": 77.0,
     "avatar_url": "/media/player_avatars/avatar.png"
+  }
+}</pre>
+                </div>
+                <div class="card">
+                    <h4>Response 200: Coach Example</h4>
+                    <pre>{
+  "id": "uuid",
+  "name": "Coach Name",
+  "email": "coach@example.com",
+  "role": "Coach",
+  "coach": {
+    "approval_status": "APPROVED",
+    "certificate_image": "/media/coach_certificates/certificate.png",
+    "approved_at": "2026-04-02T14:00:00Z",
+    "rejection_reason": ""
   }
 }</pre>
                 </div>

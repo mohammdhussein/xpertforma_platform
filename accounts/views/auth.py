@@ -8,8 +8,8 @@ from rest_framework import status
 from accounts.serializers.auth import CoachRegisterSerializer
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from accounts.serializers.auth import (
+    CompleteSetPasswordSerializer,
     LoginTokenOnlySerializer,
-    PlayerSetPasswordSerializer,
     RefreshTokenSerializer,
 )
 
@@ -51,11 +51,11 @@ class LogoutAPIView(APIView):
         return Response(status=status.HTTP_205_RESET_CONTENT)
 
 
-class PlayerSetPasswordAPIView(APIView):
+class CompleteSetPasswordAPIView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
-        serializer = PlayerSetPasswordSerializer(data=request.data)
+        serializer = CompleteSetPasswordSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
         return Response(
