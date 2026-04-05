@@ -17,6 +17,11 @@ from accounts.services.password_setup import (
     complete_password_setup,
     get_valid_password_setup_token,
 )
+from accounts.statuses import (
+    is_pending_coach_approval_status,
+    is_rejected_coach_approval_status,
+    normalize_coach_approval_status,
+)
 
 
 def _access_expires_at(access_token_str):
@@ -29,13 +34,19 @@ class CoachRegisterSerializer(serializers.Serializer):
     name = serializers.CharField(max_length=120)
     email = serializers.EmailField()
     password = serializers.CharField(min_length=8, write_only=True)
-    certificate_image = serializers.ImageField()
+    certificate_image = serializers.CharField(max_length=500, allow_blank=True)
 
     def validate_email(self, value):
         email = User.objects.normalize_email(value)
         if User.objects.filter(email=email).exists():
             raise serializers.ValidationError("An account with this email already exists.")
         return email
+
+    def validate_certificate_image(self, value):
+        certificate_image = (value or "").strip()
+        if not certificate_image:
+            raise serializers.ValidationError("Certificate image path is required.")
+        return certificate_image
 
     @transaction.atomic
     def create(self, validated):
@@ -85,8 +96,8 @@ class LoginTokenOnlySerializer(TokenObtainPairSerializer):
         # Coach status block
         if is_coach and hasattr(user, "coach_profile"):
             coach_profile = user.coach_profile
-            register_status = (coach_profile.approval_status or "").upper()
-            if register_status == "PENDING" or register_status == "REJECTED":
+            register_status = normalize_coach_approval_status(coach_profile.approval_status)
+            if is_pending_coach_approval_status(register_status) or is_rejected_coach_approval_status(register_status):
                 raise serializers.ValidationError({"register_status": "PENDING"})
 
             data["coach_status"] = {

@@ -1,6 +1,8 @@
 from rest_framework import serializers
+
 from accounts.serializers.position import PositionSummarySerializer
-from training.models import TrainingPlan, TrainingSession, TrainingPlanPlayer
+from training.models import TrainingPlan, TrainingSession
+
 
 class TrainingPlanCreateSerializer(serializers.ModelSerializer):
     def validate(self, attrs):
@@ -15,6 +17,7 @@ class TrainingPlanCreateSerializer(serializers.ModelSerializer):
         fields = ["plan_id", "title", "start_date", "end_date"]
         read_only_fields = ["plan_id"]
 
+
 class TrainingPlanDetailSerializer(serializers.ModelSerializer):
     total_sessions = serializers.IntegerField(read_only=True)
     assigned_players_count = serializers.IntegerField(source="assigned_players", read_only=True)
@@ -23,8 +26,12 @@ class TrainingPlanDetailSerializer(serializers.ModelSerializer):
         model = TrainingPlan
         fields = ["plan_id", "title", "start_date", "end_date", "status", "total_sessions", "assigned_players_count"]
 
+
+class TrainingPlanListResponseSerializer(serializers.Serializer):
+    plans = TrainingPlanDetailSerializer(many=True)
+
+
 class SessionCreateSerializer(serializers.Serializer):
-    # NOTE: no session_date here
     title = serializers.CharField(max_length=120, required=False, allow_blank=True)
     session_type = serializers.ChoiceField(
         choices=TrainingSession.SESSION_TYPE_CHOICES,
@@ -40,16 +47,11 @@ class SessionCreateSerializer(serializers.Serializer):
         end_time = attrs.get("end_time")
 
         if (start_time is None) != (end_time is None):
-            raise serializers.ValidationError(
-                {"detail": "start_time and end_time must both be provided together."}
-            )
-
+            raise serializers.ValidationError({"detail": "start_time and end_time must both be provided together."})
         if start_time is not None and end_time is not None and end_time <= start_time:
-            raise serializers.ValidationError(
-                {"end_time": "End time must be after start time."}
-            )
-
+            raise serializers.ValidationError({"end_time": "End time must be after start time."})
         return attrs
+
 
 class TrainingSessionSerializer(serializers.ModelSerializer):
     class Meta:
@@ -92,5 +94,13 @@ class PlanScreenResponseSerializer(serializers.Serializer):
     training_sessions = PlanSessionGroupSerializer(many=True)
 
 
+class TrainingPlanCreateResultSerializer(serializers.Serializer):
+    message = serializers.CharField()
+    plan = TrainingPlanDetailSerializer()
+    sessions = TrainingSessionSerializer(many=True)
+    assigned_player_ids = serializers.ListField(child=serializers.UUIDField())
+
+
 class AssignPlayersSerializer(serializers.Serializer):
     player_ids = serializers.ListField(child=serializers.UUIDField(), allow_empty=True)
+

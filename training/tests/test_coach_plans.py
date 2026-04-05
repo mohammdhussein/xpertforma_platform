@@ -205,3 +205,4 @@ class CoachTrainingPlanValidationTests(TestCase):
 
         self.assertEqual(response.status_code, 400)
         self.assertIn("invalid_player_ids", response.data)
+

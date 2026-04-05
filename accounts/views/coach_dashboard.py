@@ -1,6 +1,9 @@
+from zoneinfo import ZoneInfo
+
+from django.conf import settings
 from datetime import timedelta, datetime
+from django.db.models import Count, Q
 from django.utils import timezone
-from django.db.models import Count
 
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
@@ -28,12 +31,19 @@ def _start_of_week_sunday(date_value):
     return date_value - timedelta(days=(date_value.weekday() + 1) % 7)
 
 
+def _dashboard_now():
+    dashboard_timezone = ZoneInfo(getattr(settings, "APP_LOCAL_TIME_ZONE", "Asia/Jerusalem"))
+    return timezone.localtime(timezone.now(), dashboard_timezone)
+
+
 class CoachDashboardAPIView(APIView):
     permission_classes = [IsAuthenticated, IsApprovedCoach]
 
     def get(self, request):
         coach = request.user
-        today = timezone.localdate()
+        dashboard_now = _dashboard_now()
+        today = dashboard_now.date()
+        current_time = dashboard_now.time()
 
         # week range (Sun..Sat)
         week_start = _start_of_week_sunday(today)
@@ -86,7 +96,11 @@ class CoachDashboardAPIView(APIView):
 
         upcoming = (
             TrainingSession.objects
-            .filter(plan_id__in=plan_ids, session_date__gte=today, session_date__lte=today + timedelta(days=7))
+            .filter(plan_id__in=plan_ids, session_date__lte=today + timedelta(days=7))
+            .filter(
+                Q(session_date__gt=today)
+                | Q(session_date=today, start_time__gte=current_time)
+            )
             .select_related("plan")
             .order_by("session_date", "start_time")[:UPCOMING_SESSIONS_LIMIT]
         )

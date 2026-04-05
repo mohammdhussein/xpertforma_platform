@@ -7,6 +7,7 @@ from rest_framework.views import APIView
 
 from accounts.permissions import IsPlayer
 from training.models import TrainingPlanPlayer, TrainingSession, PlayerSessionProgress
+from training.statuses import is_completed_player_session_status, normalize_player_session_status
 from accounts.serializers.player_dashboard import PlayerDashboardSerializer
 
 
@@ -46,7 +47,7 @@ def _build_weekly_completion_points(user, plan_ids, week_start, week_end):
         day = s.session_date
         per_day_total[day] = per_day_total.get(day, 0) + 1
         status = progress_map.get(s.session_id)
-        is_completed = status in {"completed", "complete"}
+        is_completed = is_completed_player_session_status(status)
         if is_completed:
             per_day_completed[day] = per_day_completed.get(day, 0) + 1
             completed_minutes += _duration_min(s.start_time, s.end_time)
@@ -97,7 +98,7 @@ def _aggregate_week_completion(user, plan_ids, start_date, end_date):
     completed = 0
     for s in sessions:
         status = progress_map.get(s.session_id)
-        if status in {"completed", "complete"}:
+        if is_completed_player_session_status(status):
             completed += 1
 
     total = len(session_ids)
@@ -165,7 +166,7 @@ class PlayerDashboardAPIView(APIView):
                 player=user, session=next_session
             ).first()
             raw_status = progress.status if progress else "not_started"
-            status_label = "completed" if raw_status == "complete" else raw_status
+            status_label = normalize_player_session_status(raw_status)
 
             session_data = {
                 "session_id": next_session.session_id,

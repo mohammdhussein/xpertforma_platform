@@ -17,10 +17,8 @@ Including another URLconf
 from pathlib import Path
 
 from django.conf import settings
-from django.contrib import admin
 from django.http import FileResponse
 from django.urls import path, include
-from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 
 def api_reference_view(request):
@@ -34,12 +32,12 @@ urlpatterns = [
     path("api/auth/", include("accounts.urls.auth")),
     path("api/", include("accounts.urls.admin")),
     path("api/", include("accounts.urls.coach")),
-    path("api/", include("training.urls_player_training")),
-    path("api/", include("training.urls_coach")),
-    path("api/", include("accounts.urls_coach_players")),
-    path("api/", include("accounts.urls.urls")),
+    path("api/", include("accounts.urls.coach_players")),
+    path("api/", include("accounts.urls.common")),
     path("api/", include("accounts.urls.coach_dashboard")),
     path("api/", include("accounts.urls.player_dashboard")),
+    path("api/", include("training.urls.player_training")),
+    path("api/", include("training.urls.coach")),
     path("api-reference/", api_reference_view),
 
 ]
