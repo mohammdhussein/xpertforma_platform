@@ -1,4 +1,5 @@
 from django.urls import path
+
 from accounts.views.positions import PositionListAPIView
 from accounts.views.user_info import UserInfoAPIView
 

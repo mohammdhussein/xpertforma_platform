@@ -252,7 +252,7 @@
   "name": "Coach Name",
   "email": "coach@example.com",
   "password": "StrongPass123!",
-  "certificate_image": "&lt;multipart file&gt;"
+  "certificate_image": "coach_certificates/certificate.png"
 }</pre>
                 </div>
                 <div class="card">
@@ -260,7 +260,7 @@
                     <pre>{
   "id": "uuid",
   "email": "coach@example.com",
-  "approval_status": "pending",
+  "approval_status": "PENDING",
   "message": "Registration submitted. Please wait for admin approval."
 }</pre>
                 </div>
@@ -488,7 +488,7 @@
 
         <div class="endpoint" data-search="GET /api/coach/dashboard coach dashboard my_players position upcoming_sessions total_players sessions_this_week">
             <div><span class="badge get">GET</span><span class="path">/api/coach/dashboard/</span></div>
-            <p class="meta">Authenticated approved coach only. Dashboard summary with top 3 upcoming sessions. <code>sessions_this_week</code> is counted in a Sunday-to-Saturday window based on the server local date.</p>
+            <p class="meta">Authenticated approved coach only. Dashboard summary with top 3 upcoming sessions. For sessions on the current day, only sessions with a start time later than the dashboard local time are included. The dashboard local time zone is controlled by <code>APP_LOCAL_TIME_ZONE</code> and defaults to <code>Asia/Jerusalem</code>. <code>sessions_this_week</code> is counted in a Sunday-to-Saturday window based on that same local date.</p>
             <div class="grid">
                 <div class="card">
                     <h4>Response 200</h4>

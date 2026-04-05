@@ -1,5 +1,6 @@
 from django.urls import path
-from training.views_player_training import PlayerTrainingDayAPIView, PlayerSessionStatusAPIView
+
+from training.views.player_training import PlayerSessionStatusAPIView, PlayerTrainingDayAPIView
 
 urlpatterns = [
     path("player/training/day/", PlayerTrainingDayAPIView.as_view()),

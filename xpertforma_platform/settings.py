@@ -179,22 +179,34 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
-AUTH_USER_MODEL = "accounts.User"
 EMAIL_BACKEND = os.getenv(
     "EMAIL_BACKEND",
     "django.core.mail.backends.smtp.EmailBackend",
 )
+
 EMAIL_HOST = os.getenv("EMAIL_HOST", "smtp.gmail.com")
 EMAIL_PORT = int(os.getenv("EMAIL_PORT", "587"))
-EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS", "True") == "True"
-EMAIL_USE_SSL = os.getenv("EMAIL_USE_SSL", "False") == "True"
-EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "momo.hussein.king@gmail.com")
-EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "bgdq gyuo uycz pkgi")
+
+EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS", "True").lower() == "true"
+EMAIL_USE_SSL = os.getenv("EMAIL_USE_SSL", "False").lower() == "true"
+
+EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER")
+EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD")
+
 EMAIL_TIMEOUT = int(os.getenv("EMAIL_TIMEOUT", "5"))
-DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", EMAIL_HOST_USER or "no-reply@example.com")
-#PLAYER_INVITE_DEEP_LINK_BASE = os.getenv("PLAYER_INVITE_DEEP_LINK_BASE", "http://localhost:3000/set-password")
-PASSWORD_SETUP_TOKEN_TTL_HOURS = int(os.getenv("PASSWORD_SETUP_TOKEN_TTL_HOURS", "24"))
+
+DEFAULT_FROM_EMAIL = os.getenv(
+    "DEFAULT_FROM_EMAIL",
+    EMAIL_HOST_USER or "no-reply@example.com"
+)
+
+PASSWORD_SETUP_TOKEN_TTL_HOURS = int(
+    os.getenv("PASSWORD_SETUP_TOKEN_TTL_HOURS", "24")
+)
+
 PASSWORD_SETUP_DEEP_LINK_BASE = os.getenv(
     "PASSWORD_SETUP_DEEP_LINK_BASE",
-    os.getenv("PLAYER_INVITE_DEEP_LINK_BASE", "https://xpertforma-platform.onrender.com/set-password"),
+    "https://xpertforma-platform.onrender.com/set-password",
 )
+
+AUTH_USER_MODEL = "accounts.User"

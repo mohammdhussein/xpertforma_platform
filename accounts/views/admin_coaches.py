@@ -1,41 +1,33 @@
-from django.utils import timezone
-from rest_framework.views import APIView
-from rest_framework.permissions import IsAuthenticated, IsAdminUser
-from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
+from rest_framework.permissions import IsAdminUser, IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
 from accounts.models import CoachProfile
+from accounts.serializers.admin import CoachApprovalActionSerializer, PendingCoachSerializer
+from accounts.services.admin_coaches import approve_coach_profile, reject_coach_profile
+from accounts.statuses import COACH_APPROVAL_PENDING
 
 class PendingCoachesAPIView(APIView):
     permission_classes = [IsAuthenticated, IsAdminUser]
 
     def get(self, request):
-        qs = CoachProfile.objects.filter(approval_status="PENDING").select_related("user")
-        return Response([{
-            "coach_id": str(x.user.id),
-            "name": x.user.name,
-            "email": x.user.email,
-            "certificate_image": x.certificate_image.url if x.certificate_image else None,
-        } for x in qs])
+        queryset = CoachProfile.objects.filter(approval_status__iexact=COACH_APPROVAL_PENDING).select_related("user")
+        return Response(PendingCoachSerializer(queryset, many=True).data)
 
 class ApproveCoachAPIView(APIView):
     permission_classes = [IsAuthenticated, IsAdminUser]
 
     def post(self, request, coach_id):
-        cp = get_object_or_404(CoachProfile, user_id=coach_id)
-        cp.approval_status = "APPROVED"
-        cp.approved_at = timezone.now()
-        cp.approved_by = request.user
-        cp.rejection_reason = ""
-        cp.save()
-        return Response({"coach_id": str(coach_id), "status": "APPROVED"})
+        coach_profile = get_object_or_404(CoachProfile, user_id=coach_id)
+        payload = approve_coach_profile(coach_profile, request.user)
+        return Response(CoachApprovalActionSerializer(payload).data)
 
 class RejectCoachAPIView(APIView):
     permission_classes = [IsAuthenticated, IsAdminUser]
 
     def post(self, request, coach_id):
         reason = request.data.get("reason", "")
-        cp = get_object_or_404(CoachProfile, user_id=coach_id)
-        cp.approval_status = "rejected"
-        cp.rejection_reason = reason
-        cp.save()
-        return Response({"coach_id": str(coach_id), "status": "rejected", "reason": reason})
+        coach_profile = get_object_or_404(CoachProfile, user_id=coach_id)
+        payload = reject_coach_profile(coach_profile, reason=reason)
+        return Response(CoachApprovalActionSerializer(payload).data)
