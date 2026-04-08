@@ -1,0 +1,62 @@
+{% extends "website/admin/base.html" %}
+{% load static %}
+
+{% block head %}
+    <meta name="csrf-token" content="{{ csrf_token }}">
+    {% block panel_head %}{% endblock %}
+{% endblock %}
+
+{% block body_class %}admin-body admin-body--panel{% endblock %}
+
+{% block body %}
+<div class="admin-layout">
+    <aside class="admin-sidebar">
+        <div class="admin-sidebar__brand">
+            <span class="admin-sidebar__logo-frame">
+                <img
+                    src="{% static 'website/admin/xpertforma-icon.png' %}"
+                    alt="XpertForma logo"
+                    class="admin-sidebar__logo"
+                    width="44"
+                    height="44"
+                >
+            </span>
+            <div>
+                <p class="admin-sidebar__eyebrow">XpertForma</p>
+                <h1 class="admin-sidebar__title">Admin Panel</h1>
+            </div>
+        </div>
+
+        <nav class="admin-nav" aria-label="Admin navigation">
+            {% for item in admin_nav_items %}
+                <a
+                    href="{{ item.href }}"
+                    class="admin-nav__link{% if item.key == current_admin_page %} admin-nav__link--active{% endif %}"
+                >
+                    {{ item.label }}
+                </a>
+            {% endfor %}
+        </nav>
+
+        <form action="{% url 'staff-logout' %}" method="post" class="admin-sidebar__footer">
+            {% csrf_token %}
+            <button type="submit" class="button button--ghost button--block">Sign Out</button>
+        </form>
+    </aside>
+
+    <main class="admin-main">
+        <header class="page-header">
+            <div>
+                <p class="page-header__eyebrow">XpertForma Admin</p>
+                <h1 class="page-header__title">{{ page_title }}</h1>
+                <p class="page-header__subtitle">{{ page_subtitle }}</p>
+            </div>
+            <div class="page-header__actions">
+                {% block page_actions %}{% endblock %}
+            </div>
+        </header>
+
+        {% block page_content %}{% endblock %}
+    </main>
+</div>
+{% endblock %}

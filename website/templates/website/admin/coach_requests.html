@@ -1,0 +1,99 @@
+{% extends "website/admin/panel_base.html" %}
+{% load static %}
+
+{% block title %}Coach Requests | XpertForma{% endblock %}
+
+{% block panel_head %}{% endblock %}
+
+{% block page_actions %}
+    <div class="hero-actions">
+        <p id="last-updated" class="last-updated">Last updated just now</p>
+        <div class="hero-actions__buttons">
+            <button id="refresh-button" type="button" class="button button--secondary">Refresh</button>
+        </div>
+    </div>
+{% endblock %}
+
+{% block page_content %}
+    <section class="summary-grid" aria-label="Request summary">
+        <article class="summary-card">
+            <span class="summary-card__label">Pending Requests</span>
+            <strong id="pending-count" class="summary-card__value">0</strong>
+        </article>
+        <article class="summary-card">
+            <span class="summary-card__label">Approved Coaches</span>
+            <strong id="approved-count" class="summary-card__value">0</strong>
+        </article>
+    </section>
+
+    <section class="panel-card">
+        <div class="panel-card__header">
+            <div>
+                <h2 class="section-title">Pending requests</h2>
+                <p class="section-subtitle">Approve or reject coach signups in one place.</p>
+            </div>
+        </div>
+
+        <div id="feedback-banner" class="alert hidden" role="status"></div>
+
+        <div id="loading-state" class="state-card hidden">
+            <div class="spinner" aria-hidden="true"></div>
+            <h3>Loading coach requests</h3>
+            <p>Fetching the latest pending signups.</p>
+        </div>
+
+        <div id="error-state" class="state-card hidden">
+            <h3>Could not load coach requests</h3>
+            <p id="error-message">Please try again.</p>
+            <button id="retry-button" type="button" class="button button--primary">Retry</button>
+        </div>
+
+        <div id="empty-state" class="state-card hidden">
+            <h3>No pending coach requests</h3>
+            <p>New coach signups will appear here automatically.</p>
+        </div>
+
+        <div id="table-wrap" class="table-wrap hidden">
+            <table class="requests-table">
+                <thead>
+                <tr>
+                    <th>Coach</th>
+                    <th>Contact</th>
+                    <th>Certificate</th>
+                    <th>Status</th>
+                    <th>Created</th>
+                    <th class="requests-table__actions">Actions</th>
+                </tr>
+                </thead>
+                <tbody id="requests-table-body"></tbody>
+            </table>
+        </div>
+    </section>
+
+<div id="certificate-modal" class="modal hidden" aria-hidden="true">
+    <div class="modal__backdrop" data-close-modal="true"></div>
+    <div class="modal__card" role="dialog" aria-modal="true" aria-labelledby="certificate-modal-title">
+        <div class="modal__header">
+            <div>
+                <p class="eyebrow">Coach Certificate</p>
+                <h2 id="certificate-modal-title" class="modal__title">Certificate preview</h2>
+            </div>
+            <button id="close-modal-button" type="button" class="icon-button" aria-label="Close certificate preview">&times;</button>
+        </div>
+        <div class="modal__body">
+            <img id="certificate-image" class="certificate-preview hidden" alt="Coach certificate preview">
+            <div id="certificate-empty" class="state-card state-card--compact hidden">
+                <h3>No certificate available</h3>
+                <p>This request does not include a certificate image that can be previewed.</p>
+            </div>
+        </div>
+        <div class="modal__footer">
+            <a id="certificate-open-link" class="button button--secondary hidden" target="_blank" rel="noopener noreferrer">Open in new tab</a>
+        </div>
+    </div>
+</div>
+
+{{ panel_data|json_script:"coach-requests-initial-data" }}
+{{ panel_config|json_script:"coach-requests-config" }}
+<script defer src="{% static 'website/admin/coach_requests.js' %}"></script>
+{% endblock %}

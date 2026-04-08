@@ -1,0 +1,87 @@
+{% extends "website/admin/base.html" %}
+{% load static %}
+
+{% block title %}Admin Sign In | XpertForma{% endblock %}
+{% block body_class %}admin-body admin-body--centered{% endblock %}
+
+{% block body %}
+<main class="auth-shell">
+    <section class="auth-card">
+        <div class="auth-card__header">
+            <span class="auth-logo-frame">
+                <img
+                    src="{% static 'website/admin/xpertforma-icon.png' %}"
+                    alt="XpertForma logo"
+                    class="auth-logo"
+                    width="88"
+                    height="88"
+                >
+            </span>
+            <p class="eyebrow">XpertForma Admin</p>
+            <h1 class="auth-title">Sign in</h1>
+            <p class="auth-subtitle">Use your staff account to access the approval panel.</p>
+        </div>
+
+        {% if form.non_field_errors %}
+            <div class="alert alert--error">
+                {% for error in form.non_field_errors %}
+                    <p>{{ error }}</p>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <form method="post" class="auth-form" data-auth-form>
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{{ next }}">
+
+            <label class="form-field{% if form.username.errors %} form-field--error{% endif %}" for="{{ form.username.id_for_label }}">
+                <span class="field-label">{{ form.username.label }}</span>
+                <span class="input-shell">
+                    {{ form.username }}
+                </span>
+                {% if form.username.errors %}
+                    <span class="field-error">{{ form.username.errors.0 }}</span>
+                {% endif %}
+            </label>
+
+            <label class="form-field{% if form.password.errors %} form-field--error{% endif %}" for="{{ form.password.id_for_label }}">
+                <span class="form-field__row">
+                    <span class="field-label">Password</span>
+                    {% if forgot_password_href %}
+                        <a href="{{ forgot_password_href }}" class="field-link">Forgot password?</a>
+                    {% endif %}
+                </span>
+                <span class="input-shell input-shell--password">
+                    {{ form.password }}
+                    <button
+                        type="button"
+                        class="password-toggle"
+                        data-password-toggle
+                        aria-controls="{{ form.password.id_for_label }}"
+                        aria-label="Show password"
+                        aria-pressed="false"
+                    >
+                        Show
+                    </button>
+                </span>
+                {% if form.password.errors %}
+                    <span class="field-error">{{ form.password.errors.0 }}</span>
+                {% endif %}
+            </label>
+
+            <button
+                type="submit"
+                class="button button--primary button--block"
+                data-submit-button
+                data-default-label="Sign In"
+                data-loading-label="Signing in..."
+            >
+                <span class="button__label">Sign In</span>
+            </button>
+        </form>
+
+        <p class="security-hint">Secure admin access</p>
+    </section>
+</main>
+<script defer src="{% static 'website/admin/login.js' %}"></script>
+{% endblock %}

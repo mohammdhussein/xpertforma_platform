@@ -1,0 +1,68 @@
+{% extends "website/admin/panel_base.html" %}
+{% load static %}
+
+{% block title %}Coaches | XpertForma Admin{% endblock %}
+
+{% block page_content %}
+<section class="summary-grid summary-grid--three">
+    <article class="summary-card">
+        <span class="summary-card__label">Total Coaches</span>
+        <strong id="summary-total" class="summary-card__value">0</strong>
+    </article>
+    <article class="summary-card">
+        <span class="summary-card__label">Approved Coaches</span>
+        <strong id="summary-approved" class="summary-card__value">0</strong>
+    </article>
+    <article class="summary-card">
+        <span class="summary-card__label">Active Coaches</span>
+        <strong id="summary-active" class="summary-card__value">0</strong>
+    </article>
+</section>
+
+<section class="panel-card">
+    <div class="panel-card__header">
+        <div>
+            <h2 class="section-title">Coach accounts</h2>
+            <p class="section-subtitle">View coach access state and manage account activation.</p>
+        </div>
+    </div>
+
+    <div id="directory-feedback-banner" class="alert hidden" role="status"></div>
+
+    <div id="directory-loading-state" class="state-card hidden">
+        <div class="spinner" aria-hidden="true"></div>
+        <h3>Loading coaches</h3>
+        <p>Fetching coach accounts from XpertForma.</p>
+    </div>
+
+    <div id="directory-error-state" class="state-card hidden">
+        <h3>Could not load coaches</h3>
+        <p id="directory-error-message">Please try again.</p>
+        <button id="directory-retry-button" type="button" class="button button--primary">Retry</button>
+    </div>
+
+    <div id="directory-empty-state" class="state-card hidden">
+        <h3>No coaches found</h3>
+        <p>Coach accounts will appear here once they register.</p>
+    </div>
+
+    <div id="directory-table-wrap" class="table-wrap hidden">
+        <table class="requests-table">
+            <thead>
+            <tr>
+                <th>Coach</th>
+                <th>Contact</th>
+                <th>Status</th>
+                <th>Players</th>
+                <th>Joined</th>
+                <th class="requests-table__actions">Actions</th>
+            </tr>
+            </thead>
+            <tbody id="directory-table-body"></tbody>
+        </table>
+    </div>
+</section>
+
+{{ page_config|json_script:"directory-page-config" }}
+<script defer src="{% static 'website/admin/directory_page.js' %}"></script>
+{% endblock %}
