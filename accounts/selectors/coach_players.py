@@ -1,6 +1,7 @@
 from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404
 
+from accounts.files import build_media_value_url
 from accounts.models import PlayerProfile
 from accounts.serializers.position import build_position_payload
 from training.models import PlayerSessionProgress, TrainingPlanPlayer, TrainingSession
@@ -16,24 +17,25 @@ def build_coach_players_list_payload(coach_user, *, query="", tab="all"):
 
     if query:
         queryset = queryset.filter(
-            Q(user__name__icontains=query)
+            Q(user__first_name__icontains=query)
+            | Q(user__last_name__icontains=query)
             | Q(user__email__icontains=query)
             | Q(position__name__icontains=query)
             | Q(position__code__icontains=query)
-            | Q(position_label__icontains=query)
         )
 
-    if tab != "all" and hasattr(PlayerProfile, "player_state"):
-        queryset = queryset.filter(player_state=tab)
+    if tab != "all":
+        queryset = queryset.filter(state=tab)
 
     players = []
-    for profile in queryset.order_by("user__name"):
+    for profile in queryset.order_by("user__first_name", "user__last_name", "user__email"):
         players.append(
             {
                 "id": profile.user.id,
                 "name": profile.user.name,
-                "position": build_position_payload(profile.position, profile.position_label),
-                "state": getattr(profile, "player_state", "active"),
+                "position": build_position_payload(profile.position),
+                "state": profile.state,
+                "avatar_url": build_media_value_url(profile.avatar),
             }
         )
 
@@ -92,8 +94,11 @@ def build_coach_player_training_progress_payload(coach_user, player_id):
     return {
         "id": player.id,
         "name": player.name,
-        "age": getattr(player_profile, "age", None),
-        "position": build_position_payload(player_profile.position, player_profile.position_label),
+        "age": player_profile.age,
+        "phone": player_profile.phone,
+        "foot": player_profile.foot,
+        "state": player_profile.state,
+        "position": build_position_payload(player_profile.position),
         "plans": plans_out,
     }
 

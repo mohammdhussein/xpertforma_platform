@@ -238,7 +238,7 @@
     <section class="section api-section" id="auth">
         <h2>Auth</h2>
 
-        <div class="endpoint" data-search="POST /api/auth/register/coach coach register certificate_image approval_status pending">
+        <div class="endpoint" data-search="POST /api/auth/register/coach coach register first_name last_name phone_number certificate_image approval_status pending">
             <div><span class="badge post">POST</span><span class="path">/api/auth/register/coach/</span></div>
             <p class="meta">Public. Register a coach account. New coach accounts start in pending approval status.</p>
             <div class="grid">
@@ -249,7 +249,9 @@
                 <div class="card">
                     <h4>Request Body</h4>
                     <pre>{
-  "name": "Coach Name",
+  "first_name": "Coach",
+  "last_name": "Name",
+  "phone_number": "0501112222",
   "email": "coach@example.com",
   "password": "StrongPass123!",
   "certificate_image": "coach_certificates/certificate.png"
@@ -263,6 +265,14 @@
   "approval_status": "PENDING",
   "message": "Registration submitted. Please wait for admin approval."
 }</pre>
+                </div>
+                <div class="card">
+                    <h4>Error Notes</h4>
+                    <ul>
+                        <li><code>400</code> if <code>first_name</code> or <code>last_name</code> is missing</li>
+                        <li><code>400</code> if <code>certificate_image</code> is blank</li>
+                        <li><code>400</code> if the email is already registered</li>
+                    </ul>
                 </div>
             </div>
         </div>
@@ -341,7 +351,7 @@
 
         <div class="endpoint" data-search="POST /api/auth/complete-set-password complete set password token onboarding invite mobile deep link">
             <div><span class="badge post">POST</span><span class="path">/api/auth/complete-set-password/</span></div>
-            <p class="meta">Public. Completes invited player onboarding using a one-time password setup token from the mobile deep link.</p>
+            <p class="meta">Public. Sets the invited player password using a one-time password setup token from the mobile deep link.</p>
             <div class="grid">
                 <div class="card">
                     <h4>Request Body</h4>
@@ -443,16 +453,16 @@
     <section class="section api-section" id="coach">
         <h2>Coach</h2>
 
-        <div class="endpoint" data-search="POST /api/coach/create-player coach create player position_id position deep_link invitation_sent conflict 409 password setup">
+        <div class="endpoint" data-search="POST /api/coach/create-player coach create player position_id invite onboarding deep_link invitation_sent conflict 409 password setup">
             <div><span class="badge post">POST</span><span class="path">/api/coach/create-player/</span></div>
-            <p class="meta">Authenticated coach only. Creates a player, reassigns an existing player, and sends a password setup email with a one-time deep link when password setup is required.</p>
+            <p class="meta">Authenticated coach only. Creates a player shell with name, email, and position, reassigns an existing player, and sends a password setup email with a one-time deep link when password setup is required. The rest of the profile is completed later from the player profile endpoint.</p>
             <div class="grid">
                 <div class="card">
                     <h4>Request Body</h4>
                     <pre>{
   "name": "Player Name",
   "email": "player@example.com",
-  "position_id": 12
+  "position_id": 13
 }</pre>
                 </div>
                 <div class="card">
@@ -462,9 +472,9 @@
   "email": "player@example.com",
   "name": "Player Name",
   "position": {
-    "id": 12,
-    "name": "Striker",
-    "code": "ST"
+    "id": 13,
+    "name": "Center Forward",
+    "code": "CF"
   },
   "created": true,
   "password_setup_required": true,
@@ -480,6 +490,7 @@
                     <ul>
                         <li><code>409</code> if the same coach already has that player email</li>
                         <li><code>400</code> if the email belongs to a coach or manager account</li>
+                        <li><code>400</code> if <code>position_id</code> is missing or invalid</li>
                         <li><code>setup_password</code> is <code>null</code> when the player already has a usable password</li>
                     </ul>
                 </div>
@@ -532,7 +543,7 @@
     <section class="section api-section" id="coach-players">
         <h2>Coach Players</h2>
 
-        <div class="endpoint" data-search="GET /api/coach/players coach players players position code state q tab">
+        <div class="endpoint" data-search="GET /api/coach/players coach players players position code state avatar_url q tab">
             <div><span class="badge get">GET</span><span class="path">/api/coach/players/</span></div>
             <p class="meta">Authenticated coach only. Returns the signed-in coach players list.</p>
             <div class="grid">
@@ -555,7 +566,8 @@
         "name": "Striker",
         "code": "ST"
       },
-      "state": "active"
+      "state": "active",
+      "avatar_url": "/media/player_avatars/avatar.png"
     }
   ]
 }</pre>
@@ -563,7 +575,7 @@
             </div>
         </div>
 
-        <div class="endpoint" data-search="GET /api/coach/players/player_id player profile progress position plans overall_progress_percent completed_sessions remaining_sessions">
+        <div class="endpoint" data-search="GET /api/coach/players/player_id player profile progress age phone foot state position plans overall_progress_percent completed_sessions remaining_sessions">
             <div><span class="badge get">GET</span><span class="path">/api/coach/players/&lt;player_id&gt;/</span></div>
             <p class="meta">Authenticated coach only. Returns the player profile view, including training progress by plan, for one player that belongs to the signed-in coach.</p>
             <div class="grid">
@@ -576,7 +588,10 @@
                     <pre>{
   "id": "uuid",
   "name": "Jordan Smith",
-  "age": null,
+  "age": 19,
+  "phone": "0501234567",
+  "foot": "right",
+  "state": "active",
   "position": {
     "id": 12,
     "name": "Striker",
@@ -735,6 +750,7 @@
                         <li><code>400</code> if a session date is outside the plan date range</li>
                         <li><code>400</code> if only one of <code>start_time</code> or <code>end_time</code> is sent</li>
                         <li><code>400</code> if <code>end_time &lt;= start_time</code></li>
+                        <li><code>400</code> if <code>assignee_players</code> is missing or empty</li>
                         <li><code>400</code> if any assigned player does not belong to the signed-in coach</li>
                     </ul>
                 </div>
@@ -804,6 +820,57 @@
 
     <section class="section api-section" id="player">
         <h2>Player</h2>
+
+        <div class="endpoint" data-search="GET PATCH PUT /api/player/profile player profile onboarding position_id height_cm weight_kg age phone foot state fitness_level login_status team_id avatar_url">
+            <div><span class="badge get">GET</span><span class="badge patch">PATCH</span><span class="badge put">PUT</span><span class="path">/api/player/profile/</span></div>
+            <p class="meta">Authenticated player only. Returns the current player profile and updates onboarding/profile details after password setup. Both <code>PATCH</code> and <code>PUT</code> are accepted.</p>
+            <div class="grid">
+                <div class="card">
+                    <h4>Request Body (PATCH/PUT)</h4>
+                    <pre>{
+  "position_id": 13,
+  "height_cm": 182.5,
+  "weight_kg": 76.2,
+  "age": 18,
+  "phone": "0501112222",
+  "foot": "both",
+  "state": "active",
+  "fitness_level": "intermediate"
+}</pre>
+                </div>
+                <div class="card">
+                    <h4>Response 200</h4>
+                    <pre>{
+  "id": "uuid",
+  "name": "Player Name",
+  "email": "player@example.com",
+  "login_status": "complete",
+  "position": {
+    "id": 13,
+    "name": "Center Forward",
+    "code": "CF"
+  },
+  "team_id": null,
+  "avatar_url": null,
+  "height_cm": 182.5,
+  "weight_kg": 76.2,
+  "age": 18,
+  "phone": "0501112222",
+  "foot": "both",
+  "state": "active",
+  "fitness_level": "intermediate"
+}</pre>
+                </div>
+                <div class="card">
+                    <h4>Error Notes</h4>
+                    <ul>
+                        <li><code>401</code> if the user is not authenticated</li>
+                        <li><code>403</code> if the authenticated user is not a player</li>
+                        <li><code>400</code> if any provided field is invalid</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
 
         <div class="endpoint" data-search="GET /api/player/dashboard player dashboard nutrition weekly_overview session">
             <div><span class="badge get">GET</span><span class="path">/api/player/dashboard/</span></div>

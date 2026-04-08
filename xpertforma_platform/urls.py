@@ -38,6 +38,7 @@ urlpatterns = [
     path("api/", include("accounts.urls.common")),
     path("api/", include("accounts.urls.coach_dashboard")),
     path("api/", include("accounts.urls.player_dashboard")),
+    path("api/", include("accounts.urls.player_profile")),
     path("api/", include("training.urls.player_training")),
     path("api/", include("training.urls.coach")),
     path("api-reference/", api_reference_view),

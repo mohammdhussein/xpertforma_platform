@@ -34,7 +34,6 @@ class CoachDashboardTests(TestCase):
             user=self.player,
             coach=self.coach,
             position=self.central_midfielder,
-            position_label=self.central_midfielder.name,
         )
         self.player.last_seen_at = timezone.now()
         self.player.save(update_fields=["last_seen_at"])

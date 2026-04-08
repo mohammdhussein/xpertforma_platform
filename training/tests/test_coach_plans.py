@@ -31,7 +31,6 @@ class CoachTrainingPlanValidationTests(TestCase):
             user=self.player,
             coach=self.coach,
             position=self.right_winger,
-            position_label=self.right_winger.name,
         )
 
         other_coach = User.objects.create_user(
@@ -52,7 +51,6 @@ class CoachTrainingPlanValidationTests(TestCase):
             user=self.other_player,
             coach=other_coach,
             position=self.center_back,
-            position_label=self.center_back.name,
         )
 
         self.client.force_authenticate(user=self.coach)
@@ -205,4 +203,51 @@ class CoachTrainingPlanValidationTests(TestCase):
 
         self.assertEqual(response.status_code, 400)
         self.assertIn("invalid_player_ids", response.data)
+
+    def test_rejects_plan_when_assignee_players_is_missing(self):
+        response = self.client.post(
+            "/api/coach/plans/",
+            {
+                "title": "Missing Players Plan",
+                "start_date": "2026-04-01",
+                "end_date": "2026-04-03",
+                "sessions": [
+                    {
+                        "date": "2026-04-01",
+                        "title": "Session A",
+                        "start_time": "10:00",
+                        "end_time": "11:00",
+                    }
+                ],
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.data["assignee_players"], ["At least one player must be selected."])
+        self.assertEqual(TrainingPlan.objects.count(), 0)
+
+    def test_rejects_plan_when_assignee_players_is_empty(self):
+        response = self.client.post(
+            "/api/coach/plans/",
+            {
+                "title": "Empty Players Plan",
+                "start_date": "2026-04-01",
+                "end_date": "2026-04-03",
+                "sessions": [
+                    {
+                        "date": "2026-04-01",
+                        "title": "Session A",
+                        "start_time": "10:00",
+                        "end_time": "11:00",
+                    }
+                ],
+                "assignee_players": [],
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.data["assignee_players"], ["At least one player must be selected."])
+        self.assertEqual(TrainingPlan.objects.count(), 0)
 

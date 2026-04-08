@@ -2,7 +2,7 @@ from django.db import transaction
 from django.contrib.auth.hashers import is_password_usable
 from rest_framework import serializers
 from rest_framework.exceptions import APIException
-from accounts.models import User, Role, UserRole, PlayerProfile, Position
+from accounts.models import User, Role, UserRole, PlayerProfile, Position, split_full_name
 from accounts.serializers.position import (
     PositionSummarySerializer,
     build_position_payload,
@@ -21,8 +21,6 @@ class CoachCreatePlayerSerializer(serializers.Serializer):
     position_id = serializers.PrimaryKeyRelatedField(
         source="position",
         queryset=Position.objects.all(),
-        required=False,
-        allow_null=True,
     )
 
     def validate_email(self, value):
@@ -38,16 +36,18 @@ class CoachCreatePlayerSerializer(serializers.Serializer):
     @transaction.atomic
     def create(self, validated, coach_user):
         player_role, _ = Role.objects.get_or_create(role_name="Player")
-        position = validated.get("position")
         email = validated["email"]
 
         user = User.objects.filter(email=email).first()
         created = False
         password_setup_required = False
+        existing_profile = None
 
         if user is None:
+            first_name, last_name = split_full_name(validated["name"])
             user = User.objects.create_user(
-                name=validated["name"],
+                first_name=first_name,
+                last_name=last_name,
                 email=email,
                 password=None,
             )
@@ -60,23 +60,25 @@ class CoachCreatePlayerSerializer(serializers.Serializer):
 
             if validated["name"] and user.name != validated["name"]:
                 user.name = validated["name"]
-                user.save(update_fields=["name"])
+                user.save(update_fields=["first_name", "last_name"])
             password_setup_required = not is_password_usable(user.password)
 
         UserRole.objects.get_or_create(user=user, role=player_role)
+        profile_defaults = {
+            "coach": coach_user,
+            "login_status": "first_login" if password_setup_required else "complete",
+        }
+        if existing_profile is None or "position" in validated:
+            profile_defaults["position"] = validated.get("position")
+
         player_profile, _ = PlayerProfile.objects.update_or_create(
             user=user,
-            defaults={
-                "coach": coach_user,
-                "position": position,
-                "position_label": position.name if position else "",
-                "login_status": "first_login" if password_setup_required else "complete",
-            },
+            defaults=profile_defaults,
         )
 
         return (
             user,
-            build_position_payload(player_profile.position, player_profile.position_label),
+            build_position_payload(player_profile.position),
             created,
             password_setup_required,
         )
@@ -87,6 +89,7 @@ class PlayerCardSerializer(serializers.Serializer):
     name = serializers.CharField()
     position = PositionSummarySerializer()
     state = serializers.CharField()  # active / needs_review / injured
+    avatar_url = serializers.CharField(allow_null=True)
 
 
 class PlayerListResponseSerializer(serializers.Serializer):
@@ -107,6 +110,9 @@ class PlayerHeaderSerializer(serializers.Serializer):
     id = serializers.UUIDField()
     name = serializers.CharField()
     age = serializers.IntegerField(allow_null=True)
+    phone = serializers.CharField(allow_blank=True, allow_null=True)
+    foot = serializers.CharField(allow_null=True)
+    state = serializers.CharField()
     position = PositionSummarySerializer()
 
 
@@ -114,5 +120,8 @@ class PlayerTrainingProgressResponseSerializer(serializers.Serializer):
     id = serializers.UUIDField()
     name = serializers.CharField()
     age = serializers.IntegerField(allow_null=True)
+    phone = serializers.CharField(allow_blank=True, allow_null=True)
+    foot = serializers.CharField(allow_null=True)
+    state = serializers.CharField()
     position = PositionSummarySerializer()
     plans = PlanProgressSerializer(many=True)

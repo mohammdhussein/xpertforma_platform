@@ -63,7 +63,12 @@ class CompleteSetPasswordTests(TestCase):
         self.player.refresh_from_db()
         token_record.refresh_from_db()
         self.assertTrue(self.player.check_password("NewStrongPass123!"))
-        self.assertEqual(self.player.player_profile.login_status, "complete")
+        self.assertEqual(self.player.player_profile.login_status, "first_login")
+        self.assertIsNone(self.player.player_profile.position)
+        self.assertIsNone(self.player.player_profile.age)
+        self.assertIsNone(self.player.player_profile.phone)
+        self.assertIsNone(self.player.player_profile.foot)
+        self.assertEqual(self.player.player_profile.state, PlayerProfile.STATE_ACTIVE)
         self.assertTrue(token_record.is_used)
 
     def test_expired_token_returns_error(self):

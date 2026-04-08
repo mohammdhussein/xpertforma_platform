@@ -21,7 +21,6 @@ class PlayerTrainingDayTests(TestCase):
         PlayerProfile.objects.create(
             user=self.player,
             position=striker,
-            position_label=striker.name,
             login_status="complete",
         )
         self.plan = TrainingPlan.objects.create(

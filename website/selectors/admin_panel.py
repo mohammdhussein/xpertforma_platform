@@ -9,22 +9,11 @@ from accounts.statuses import (
     normalize_coach_approval_status,
 )
 
-
-def _split_name(full_name):
-    parts = (full_name or "").strip().split()
-    if not parts:
-        return "", ""
-    if len(parts) == 1:
-        return parts[0], ""
-    return parts[0], " ".join(parts[1:])
-
-
 def _build_name_payload(user):
-    first_name, last_name = _split_name(user.name)
     return {
         "full_name": user.name,
-        "first_name": first_name,
-        "last_name": last_name,
+        "first_name": user.first_name,
+        "last_name": user.last_name,
     }
 
 
@@ -49,13 +38,12 @@ def _humanize_player_status(login_status):
 
 
 def _build_coach_request_row(coach_profile):
-    first_name, last_name = _split_name(coach_profile.user.name)
     return {
         "id": coach_profile.user_id,
-        "first_name": first_name,
-        "last_name": last_name,
+        "first_name": coach_profile.user.first_name,
+        "last_name": coach_profile.user.last_name,
         "email": coach_profile.user.email,
-        "phone_number": None,
+        "phone_number": coach_profile.phone_number or None,
         "certificate_url": build_media_value_url(coach_profile.certificate_image),
         "status": normalize_coach_approval_status(
             coach_profile.approval_status,
@@ -140,7 +128,7 @@ def build_admin_coaches_payload():
                 "id": coach_profile.user_id,
                 **_build_name_payload(coach_profile.user),
                 "email": coach_profile.user.email,
-                "phone_number": None,
+                "phone_number": coach_profile.phone_number or None,
                 "status": _build_coach_status_label(coach_profile),
                 "is_active": coach_profile.user.is_active,
                 "joined_at": coach_profile.approved_at or coach_profile.user.created_at,

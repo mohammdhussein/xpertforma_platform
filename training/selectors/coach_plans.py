@@ -30,7 +30,7 @@ def build_training_plan_screen_payload(plan, request):
     assigned_rows = (
         TrainingPlanPlayer.objects.filter(plan=plan)
         .select_related("player", "player__player_profile", "player__player_profile__position")
-        .order_by("player__name")
+        .order_by("player__first_name", "player__last_name", "player__email")
     )
 
     assigned_players = []
@@ -44,10 +44,7 @@ def build_training_plan_screen_payload(plan, request):
             {
                 "id": row.player.id,
                 "name": row.player.name,
-                "position": build_position_payload(
-                    getattr(player_profile, "position", None),
-                    getattr(player_profile, "position_label", ""),
-                ),
+                "position": build_position_payload(getattr(player_profile, "position", None)),
                 "avatar_url": avatar_url,
             }
         )
