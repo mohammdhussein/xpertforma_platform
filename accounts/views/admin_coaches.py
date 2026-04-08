@@ -1,21 +1,25 @@
 from django.shortcuts import get_object_or_404
+from rest_framework.authentication import SessionAuthentication
 from rest_framework.permissions import IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from accounts.authentication import BlacklistableJWTAuthentication
 from accounts.models import CoachProfile
+from accounts.selectors.admin_coaches import get_pending_coach_profiles_queryset
 from accounts.serializers.admin import CoachApprovalActionSerializer, PendingCoachSerializer
 from accounts.services.admin_coaches import approve_coach_profile, reject_coach_profile
-from accounts.statuses import COACH_APPROVAL_PENDING
 
 class PendingCoachesAPIView(APIView):
+    authentication_classes = [SessionAuthentication, BlacklistableJWTAuthentication]
     permission_classes = [IsAuthenticated, IsAdminUser]
 
     def get(self, request):
-        queryset = CoachProfile.objects.filter(approval_status__iexact=COACH_APPROVAL_PENDING).select_related("user")
+        queryset = get_pending_coach_profiles_queryset()
         return Response(PendingCoachSerializer(queryset, many=True).data)
 
 class ApproveCoachAPIView(APIView):
+    authentication_classes = [SessionAuthentication, BlacklistableJWTAuthentication]
     permission_classes = [IsAuthenticated, IsAdminUser]
 
     def post(self, request, coach_id):
@@ -24,6 +28,7 @@ class ApproveCoachAPIView(APIView):
         return Response(CoachApprovalActionSerializer(payload).data)
 
 class RejectCoachAPIView(APIView):
+    authentication_classes = [SessionAuthentication, BlacklistableJWTAuthentication]
     permission_classes = [IsAuthenticated, IsAdminUser]
 
     def post(self, request, coach_id):

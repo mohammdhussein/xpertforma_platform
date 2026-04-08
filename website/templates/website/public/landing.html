@@ -1,0 +1,331 @@
+{% extends "website/public/base.html" %}
+{% load static %}
+
+{% block title %}XpertForma | AI-Powered Football Training & Performance Platform{% endblock %}
+
+{% block body %}
+<header class="site-header" id="home">
+    <div class="site-shell site-header__inner">
+        <a href="#home" class="brand-mark" aria-label="XpertForma home">
+            <span class="brand-mark__icon-frame">
+                <img src="{% static 'website/brand/xpertforma-icon.png' %}" alt="" class="brand-mark__icon">
+            </span>
+            <span class="brand-mark__text">
+                <span class="brand-mark__eyebrow">Football performance platform</span>
+                <strong>XpertForma</strong>
+            </span>
+        </a>
+
+        <button
+            type="button"
+            class="nav-toggle"
+            aria-expanded="false"
+            aria-controls="primary-navigation"
+            data-nav-toggle
+        >
+            <span></span>
+            <span></span>
+            <span></span>
+            <span class="sr-only">Toggle navigation</span>
+        </button>
+
+        <nav class="site-nav" id="primary-navigation" data-nav-menu>
+            <ul class="site-nav__links">
+                {% for item in nav_links %}
+                    <li><a href="{{ item.href }}">{{ item.label }}</a></li>
+                {% endfor %}
+            </ul>
+            <div class="site-nav__actions">
+                <a href="{{ get_started_href }}" class="button button--primary">Get Started</a>
+            </div>
+        </nav>
+    </div>
+</header>
+
+<main>
+    <section class="hero-section">
+        <div class="site-shell hero-grid">
+            <div class="hero-copy">
+                <span class="eyebrow-badge">Built for structured football development</span>
+                <h1 class="hero-title">AI-Powered Football Training &amp; Performance Platform</h1>
+                <p class="hero-description">
+                    XpertForma helps players and coaches manage training plans, track progress,
+                    monitor nutrition, and keep development moving with one connected digital platform.
+                </p>
+                <div class="hero-actions">
+                    <a href="{{ get_started_href }}" class="button button--primary button--large">Get Started</a>
+                    <a href="{{ request_demo_href }}" class="button button--secondary button--large">Request Demo</a>
+                </div>
+                <div class="hero-trust">
+                    <span>Coach-player connection</span>
+                    <span>Weekly progress visibility</span>
+                    <span>Structured performance workflows</span>
+                </div>
+            </div>
+
+            <div class="hero-visual" aria-label="XpertForma product preview">
+                <article class="hero-dashboard">
+                    <header class="hero-dashboard__header">
+                        <div>
+                            <span class="hero-dashboard__eyebrow">Player Home</span>
+                            <h2>Weekly performance overview</h2>
+                        </div>
+                        <span class="hero-dashboard__pill">Live workflow</span>
+                    </header>
+                    <div class="hero-dashboard__stats">
+                        <div class="mini-stat">
+                            <span class="mini-stat__label">Sessions completed</span>
+                            <strong>4 / 5</strong>
+                        </div>
+                        <div class="mini-stat mini-stat--green">
+                            <span class="mini-stat__label">Nutrition score</span>
+                            <strong>88%</strong>
+                        </div>
+                        <div class="mini-stat mini-stat--orange">
+                            <span class="mini-stat__label">Coach feedback</span>
+                            <strong>Ready</strong>
+                        </div>
+                    </div>
+                    <div class="hero-dashboard__plan">
+                        <div class="hero-dashboard__plan-head">
+                            <div>
+                                <span class="hero-dashboard__eyebrow">Today</span>
+                                <strong>Technical control + finishing</strong>
+                            </div>
+                            <span class="timeline-chip">18:00</span>
+                        </div>
+                        <div class="timeline-stack">
+                            <span class="timeline-item timeline-item--blue">Ball mastery circuit</span>
+                            <span class="timeline-item timeline-item--green">Finishing repetitions</span>
+                            <span class="timeline-item timeline-item--orange">Recovery meal check</span>
+                        </div>
+                    </div>
+                </article>
+
+                <article class="floating-card floating-card--top">
+                    <span class="floating-card__label">Coach Plans</span>
+                    <strong>12 active training plans</strong>
+                    <p>Assign sessions quickly and keep every squad on schedule.</p>
+                </article>
+
+                <article class="floating-card floating-card--bottom">
+                    <span class="floating-card__label">Admin approvals</span>
+                    <strong>3 coach requests pending review</strong>
+                    <p>Certificates, approvals, and access control in one place.</p>
+                </article>
+            </div>
+        </div>
+    </section>
+
+    <section class="section-block">
+        <div class="site-shell">
+            <div class="section-heading">
+                <span class="section-kicker">Who it&rsquo;s for</span>
+                <h2>Designed for the full football development environment</h2>
+                <p>Whether you are leading training, following sessions, or organizing a club, XpertForma keeps the workflow clear.</p>
+            </div>
+            <div class="card-grid card-grid--three">
+                {% for card in audience_cards %}
+                    <article class="info-card info-card--{{ card.tone }}">
+                        <span class="info-card__eyebrow">{{ card.eyebrow }}</span>
+                        <h3>{{ card.title }}</h3>
+                        <p>{{ card.description }}</p>
+                        <ul class="bullet-list">
+                            {% for point in card.points %}
+                                <li>{{ point }}</li>
+                            {% endfor %}
+                        </ul>
+                    </article>
+                {% endfor %}
+            </div>
+        </div>
+    </section>
+
+    <section class="section-block section-block--tinted" id="features">
+        <div class="site-shell">
+            <div class="section-heading">
+                <span class="section-kicker">Core features</span>
+                <h2>Everything needed to guide performance in one connected platform</h2>
+                <p>Built around the real flow of training management, player follow-through, and coach oversight.</p>
+            </div>
+            <div class="feature-grid">
+                {% for feature in feature_cards %}
+                    <article class="feature-card">
+                        <span class="feature-card__icon">{{ feature.icon }}</span>
+                        <h3>{{ feature.title }}</h3>
+                        <p>{{ feature.description }}</p>
+                    </article>
+                {% endfor %}
+            </div>
+        </div>
+    </section>
+
+    <section class="section-block" id="how-it-works">
+        <div class="site-shell">
+            <div class="section-heading section-heading--compact">
+                <span class="section-kicker">How it works</span>
+                <h2>A simple workflow from planning to progress review</h2>
+            </div>
+            <div class="steps-grid">
+                {% for step in how_it_works_steps %}
+                    <article class="step-card">
+                        <span class="step-card__number">{{ step.number }}</span>
+                        <h3>{{ step.title }}</h3>
+                        <p>{{ step.description }}</p>
+                    </article>
+                {% endfor %}
+            </div>
+        </div>
+    </section>
+
+    <section class="section-block">
+        <div class="site-shell">
+            <div class="section-heading">
+                <span class="section-kicker">Product preview</span>
+                <h2>Preview the major product surfaces</h2>
+                <p>From the player home screen to coach and admin workflows, every experience stays aligned inside the same system.</p>
+            </div>
+            <div class="preview-grid">
+                {% for preview in product_previews %}
+                    <article class="preview-card preview-card--{{ preview.tone }}">
+                        <div class="preview-card__mockup">
+                            <div class="preview-card__topbar">
+                                <span>{{ preview.label }}</span>
+                                <span class="preview-card__signal"></span>
+                            </div>
+                            <div class="preview-card__screen">
+                                <div class="preview-card__screen-head">
+                                    <strong>{{ preview.title }}</strong>
+                                    <span class="preview-chip">{{ preview.label }}</span>
+                                </div>
+                                <div class="preview-card__metrics">
+                                    {% for metric in preview.metrics %}
+                                        <span class="preview-metric">{{ metric }}</span>
+                                    {% endfor %}
+                                </div>
+                                <div class="preview-card__bars">
+                                    <span></span>
+                                    <span></span>
+                                    <span></span>
+                                </div>
+                            </div>
+                        </div>
+                        <h3>{{ preview.title }}</h3>
+                        <p>{{ preview.description }}</p>
+                    </article>
+                {% endfor %}
+            </div>
+        </div>
+    </section>
+
+    <section class="section-block section-block--tinted">
+        <div class="site-shell benefits-layout">
+            <div class="section-heading section-heading--left">
+                <span class="section-kicker">Benefits</span>
+                <h2>Why teams use XpertForma to organize development</h2>
+                <p>A cleaner performance workflow means clearer communication, better follow-through, and stronger coaching decisions.</p>
+            </div>
+            <div class="benefits-grid">
+                {% for benefit in benefits %}
+                    <article class="benefit-card">
+                        <span class="benefit-card__marker"></span>
+                        <div>
+                            <h3>{{ benefit.title }}</h3>
+                            <p>{{ benefit.description }}</p>
+                        </div>
+                    </article>
+                {% endfor %}
+            </div>
+        </div>
+    </section>
+
+    <section class="section-block" id="about">
+        <div class="site-shell about-panel">
+            <div class="about-copy">
+                <span class="section-kicker">About the project</span>
+                <h2>XpertForma connects training management, nutrition tracking, and performance visibility</h2>
+                <p>
+                    XpertForma is a football training and performance platform built to support structured player development.
+                    It connects players and coaches in one digital system and brings training plans, nutrition, and progress visibility
+                    into one practical workflow.
+                </p>
+            </div>
+            <div class="about-points">
+                <article class="about-point">
+                    <strong>Structured player development</strong>
+                    <p>Turn weekly planning into a repeatable system instead of scattered coordination.</p>
+                </article>
+                <article class="about-point">
+                    <strong>Connected coach-player workflow</strong>
+                    <p>Keep assignments, completion, and review visible to the people who need them.</p>
+                </article>
+                <article class="about-point">
+                    <strong>One performance-ready environment</strong>
+                    <p>Support training, nutrition, and progress tracking inside the same product ecosystem.</p>
+                </article>
+            </div>
+        </div>
+    </section>
+
+    <section class="section-block section-block--cta" id="final-cta">
+        <div class="site-shell">
+            <div class="cta-panel">
+                <div>
+                    <span class="section-kicker section-kicker--light">Start with structure</span>
+                    <h2>Bring training plans, player accountability, and coach visibility together</h2>
+                    <p>Explore how XpertForma can support your players, coaches, and football development workflow.</p>
+                </div>
+                <div class="cta-panel__actions">
+                    <a href="{{ get_started_href }}" class="button button--light">Get Started</a>
+                    <a href="{{ request_demo_href }}" class="button button--outline-light">Request Demo</a>
+                </div>
+            </div>
+        </div>
+    </section>
+</main>
+
+<footer class="site-footer" id="contact">
+    <div class="site-shell footer-grid">
+        <div class="footer-brand">
+            <div class="brand-mark brand-mark--footer">
+                <span class="brand-mark__icon-frame">
+                    <img src="{% static 'website/brand/xpertforma-icon.png' %}" alt="" class="brand-mark__icon">
+                </span>
+                <span class="brand-mark__text">
+                    <strong>XpertForma</strong>
+                </span>
+            </div>
+            <p>
+                Football training and performance software for structured player development,
+                coach coordination, and clear weekly visibility.
+            </p>
+        </div>
+
+        <div class="footer-nav">
+            <h3>Navigation</h3>
+            <ul>
+                {% for item in nav_links %}
+                    <li><a href="{{ item.href }}">{{ item.label }}</a></li>
+                {% endfor %}
+            </ul>
+        </div>
+
+        <div class="footer-contact">
+            <h3>Contact</h3>
+            <a href="mailto:{{ contact_email }}">{{ contact_email }}</a>
+            <div class="social-placeholders" aria-label="Social links coming soon">
+                <span>Instagram</span>
+                <span>LinkedIn</span>
+                <span>YouTube</span>
+            </div>
+        </div>
+    </div>
+    <div class="site-shell footer-bottom">
+        <span>&copy; {% now "Y" %} XpertForma. All rights reserved.</span>
+    </div>
+</footer>
+{% endblock %}
+
+{% block scripts %}
+    <script src="{% static 'website/public/landing.js' %}"></script>
+{% endblock %}

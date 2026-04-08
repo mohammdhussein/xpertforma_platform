@@ -22,7 +22,7 @@ class CoachPlayersListAPIView(APIView):
         return Response(PlayerListResponseSerializer(payload).data)
 
 
-class CoachPlayerTrainingProgressAPIView(APIView):
+class CoachPlayerAPIView(APIView):
     permission_classes = [IsAuthenticated, IsCoach]
 
     def get(self, request, player_id):

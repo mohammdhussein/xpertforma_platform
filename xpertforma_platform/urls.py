@@ -29,6 +29,8 @@ def api_reference_view(request):
 
 
 urlpatterns = [
+    path("", include("website.urls.public")),
+    path("staff/", include("website.urls.admin")),
     path("api/auth/", include("accounts.urls.auth")),
     path("api/", include("accounts.urls.admin")),
     path("api/", include("accounts.urls.coach")),
