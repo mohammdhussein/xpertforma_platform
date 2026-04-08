@@ -4,11 +4,27 @@ from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, BaseUserManager
 
 
+def split_full_name(value):
+    parts = (value or "").strip().split()
+    if not parts:
+        return "", ""
+    if len(parts) == 1:
+        return parts[0], ""
+    return parts[0], " ".join(parts[1:])
+
+
 class UserManager(BaseUserManager):
     def create_user(self, email, password=None, **extra):
         if not email:
             raise ValueError("Email is required")
         email = self.normalize_email(email)
+        full_name = extra.pop("name", None)
+        if full_name is not None and not (extra.get("first_name") or extra.get("last_name")):
+            first_name, last_name = split_full_name(full_name)
+            extra["first_name"] = first_name
+            extra["last_name"] = last_name
+        extra.setdefault("first_name", "")
+        extra.setdefault("last_name", "")
         user = self.model(email=email, **extra)
         user.set_password(password)
         user.save(using=self._db)
@@ -22,7 +38,8 @@ class UserManager(BaseUserManager):
 
 class User(AbstractBaseUser, PermissionsMixin):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    name = models.CharField(max_length=120)
+    first_name = models.CharField(max_length=120, blank=True)
+    last_name = models.CharField(max_length=120, blank=True)
     email = models.EmailField(unique=True)
     created_at = models.DateTimeField(auto_now_add=True)
     last_login_at = models.DateTimeField(null=True, blank=True)
@@ -33,7 +50,15 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     objects = UserManager()
     USERNAME_FIELD = "email"
-    REQUIRED_FIELDS = ["name"]
+    REQUIRED_FIELDS = ["first_name", "last_name"]
+
+    @property
+    def name(self):
+        return " ".join(part for part in [self.first_name, self.last_name] if part).strip()
+
+    @name.setter
+    def name(self, value):
+        self.first_name, self.last_name = split_full_name(value)
 
     def __str__(self):
         return self.email
@@ -59,6 +84,7 @@ class UserRole(models.Model):
 class CoachProfile(models.Model):
     user = models.OneToOneField("accounts.User", on_delete=models.CASCADE, related_name="coach_profile")
     certificate_image = models.ImageField(upload_to="coach_certificates/", null=True, blank=True)
+    phone_number = models.CharField(max_length=32, null=True, blank=True)
     approval_status = models.CharField(max_length=20, default="PENDING")  # pending/approved/rejected
     approved_at = models.DateTimeField(null=True, blank=True)
     approved_by = models.ForeignKey("accounts.User", null=True, blank=True, on_delete=models.SET_NULL,
@@ -80,6 +106,24 @@ class Position(models.Model):
 
 
 class PlayerProfile(models.Model):
+    FOOT_RIGHT = "right"
+    FOOT_LEFT = "left"
+    FOOT_BOTH = "both"
+    FOOT_CHOICES = [
+        (FOOT_RIGHT, "Right"),
+        (FOOT_LEFT, "Left"),
+        (FOOT_BOTH, "Both"),
+    ]
+
+    STATE_ACTIVE = "active"
+    STATE_INJURED = "injured"
+    STATE_NEEDS_REVIEW = "needs_review"
+    STATE_CHOICES = [
+        (STATE_ACTIVE, "Active"),
+        (STATE_INJURED, "Injured"),
+        (STATE_NEEDS_REVIEW, "Needs Review"),
+    ]
+
     user = models.OneToOneField("accounts.User", on_delete=models.CASCADE, primary_key=True,
                                 related_name="player_profile")
 
@@ -94,7 +138,10 @@ class PlayerProfile(models.Model):
 
     height_cm = models.FloatField(null=True, blank=True)
     weight_kg = models.FloatField(null=True, blank=True)
-    position_label = models.CharField(max_length=40, blank=True)
+    age = models.PositiveSmallIntegerField(null=True, blank=True)
+    phone = models.CharField(max_length=32, null=True, blank=True)
+    foot = models.CharField(max_length=10, choices=FOOT_CHOICES, null=True, blank=True)
+    state = models.CharField(max_length=20, choices=STATE_CHOICES, default=STATE_ACTIVE)
     position = models.ForeignKey("accounts.Position", on_delete=models.SET_NULL, null=True, blank=True,
                                  related_name="player_profiles")
     fitness_level = models.CharField(max_length=40, blank=True)

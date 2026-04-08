@@ -21,6 +21,7 @@ class AdminCoachRequestsPageTests(TestCase):
         self.pending_profile = CoachProfile.objects.create(
             user=self.coach_user,
             approval_status=COACH_APPROVAL_PENDING,
+            phone_number="0501112222",
             certificate_image="coach_certificates/pending-certificate.png",
         )
         self.approved_user = User.objects.create_user(
@@ -90,6 +91,7 @@ class AdminCoachRequestsPageTests(TestCase):
         self.assertEqual(payload["summary"]["approved_coaches"], 1)
         self.assertEqual(len(payload["requests"]), 1)
         self.assertEqual(payload["requests"][0]["email"], "coachpending@example.com")
+        self.assertEqual(payload["requests"][0]["phone_number"], "0501112222")
         self.assertEqual(
             payload["requests"][0]["certificate_url"],
             "/media/coach_certificates/pending-certificate.png",
@@ -105,6 +107,8 @@ class AdminCoachRequestsPageTests(TestCase):
         self.assertEqual(payload["summary"]["total_coaches"], 2)
         self.assertEqual(len(payload["coaches"]), 2)
         self.assertEqual(payload["coaches"][0]["email"], "coachapproved@example.com")
+        pending_row = next(row for row in payload["coaches"] if row["email"] == "coachpending@example.com")
+        self.assertEqual(pending_row["phone_number"], "0501112222")
 
     def test_players_data_endpoint_returns_real_players(self):
         self.client.force_login(self.staff_user)

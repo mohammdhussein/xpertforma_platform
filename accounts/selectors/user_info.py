@@ -34,7 +34,7 @@ def build_user_info_payload(user):
     if hasattr(user, "player_profile"):
         player_profile = user.player_profile
         player_data = {
-            "position": build_position_payload(player_profile.position, player_profile.position_label),
+            "position": build_position_payload(player_profile.position),
             "team_id": str(player_profile.team_id) if getattr(player_profile, "team_id", None) else None,
             "height_cm": getattr(player_profile, "height_cm", None),
             "weight_kg": getattr(player_profile, "weight_kg", None),

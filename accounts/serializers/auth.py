@@ -8,7 +8,7 @@ from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer, TokenRefreshSerializer
 from rest_framework_simplejwt.tokens import AccessToken
 
-from accounts.models import User, Role, UserRole, CoachProfile
+from accounts.models import CoachProfile, Role, User, UserRole
 from accounts.services.password_setup import (
     ExpiredPasswordSetupTokenError,
     InvalidPasswordSetupTokenError,
@@ -31,7 +31,9 @@ def _access_expires_at(access_token_str):
 
 
 class CoachRegisterSerializer(serializers.Serializer):
-    name = serializers.CharField(max_length=120)
+    first_name = serializers.CharField(max_length=60)
+    last_name = serializers.CharField(max_length=60)
+    phone_number = serializers.CharField(max_length=32, required=False, allow_blank=True)
     email = serializers.EmailField()
     password = serializers.CharField(min_length=8, write_only=True)
     certificate_image = serializers.CharField(max_length=500, allow_blank=True)
@@ -48,11 +50,28 @@ class CoachRegisterSerializer(serializers.Serializer):
             raise serializers.ValidationError("Certificate image path is required.")
         return certificate_image
 
+    def validate(self, attrs):
+        first_name = (attrs.get("first_name") or "").strip()
+        last_name = (attrs.get("last_name") or "").strip()
+        phone_number = (attrs.get("phone_number") or "").strip()
+        full_name = f"{first_name} {last_name}".strip()
+
+        if len(full_name) > 120:
+            raise serializers.ValidationError(
+                {"last_name": ["Combined first_name and last_name must be 120 characters or fewer."]}
+            )
+
+        attrs["first_name"] = first_name
+        attrs["last_name"] = last_name
+        attrs["phone_number"] = phone_number or None
+        return attrs
+
     @transaction.atomic
     def create(self, validated):
         coach_role, _ = Role.objects.get_or_create(role_name="Coach")
         user = User.objects.create_user(
-            name=validated["name"],
+            first_name=validated["first_name"],
+            last_name=validated["last_name"],
             email=validated["email"],
             password=validated["password"],
         )
@@ -62,6 +81,7 @@ class CoachRegisterSerializer(serializers.Serializer):
         CoachProfile.objects.create(
             user=user,
             certificate_image=validated["certificate_image"],
+            phone_number=validated.get("phone_number"),
             approval_status="PENDING"
         )
         return user

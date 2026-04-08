@@ -68,7 +68,7 @@ def _validate_assignee_players(coach_user, raw_assignee_players):
         player_ids_raw.append(item["id"])
 
     if not player_ids_raw:
-        return []
+        raise serializers.ValidationError({"assignee_players": ["At least one player must be selected."]})
 
     serializer = AssignPlayersSerializer(data={"player_ids": player_ids_raw})
     serializer.is_valid(raise_exception=True)

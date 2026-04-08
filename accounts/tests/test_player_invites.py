@@ -56,6 +56,13 @@ class CoachCreatePlayerFlowTests(TestCase):
         self.assertEqual(player.player_profile.coach, self.coach)
         self.assertEqual(player.player_profile.login_status, "first_login")
         self.assertEqual(player.player_profile.position, self.striker)
+        self.assertIsNone(player.player_profile.height_cm)
+        self.assertIsNone(player.player_profile.weight_kg)
+        self.assertIsNone(player.player_profile.age)
+        self.assertIsNone(player.player_profile.phone)
+        self.assertIsNone(player.player_profile.foot)
+        self.assertEqual(player.player_profile.state, PlayerProfile.STATE_ACTIVE)
+        self.assertEqual(player.player_profile.fitness_level, "")
         self.assertFalse(token_record.is_used)
         self.assertEqual(token_record.purpose, PasswordSetupToken.PURPOSE_SET_PASSWORD)
         self.assertEqual(len(mail.outbox), 1)
@@ -90,8 +97,14 @@ class CoachCreatePlayerFlowTests(TestCase):
             user=player,
             coach=old_coach,
             position=self.right_winger,
-            position_label=self.right_winger.name,
             login_status="complete",
+            height_cm=174,
+            weight_kg=67,
+            age=24,
+            phone="0509990000",
+            foot=PlayerProfile.FOOT_RIGHT,
+            state=PlayerProfile.STATE_NEEDS_REVIEW,
+            fitness_level="starter",
         )
 
         response = self.client.post(
@@ -114,7 +127,13 @@ class CoachCreatePlayerFlowTests(TestCase):
         player.refresh_from_db()
         self.assertEqual(player.player_profile.coach, self.coach)
         self.assertEqual(player.player_profile.position, self.central_midfielder)
-        self.assertEqual(player.player_profile.position_label, self.central_midfielder.name)
+        self.assertEqual(player.player_profile.height_cm, 174)
+        self.assertEqual(player.player_profile.weight_kg, 67)
+        self.assertEqual(player.player_profile.age, 24)
+        self.assertEqual(player.player_profile.phone, "0509990000")
+        self.assertEqual(player.player_profile.foot, PlayerProfile.FOOT_RIGHT)
+        self.assertEqual(player.player_profile.state, PlayerProfile.STATE_NEEDS_REVIEW)
+        self.assertEqual(player.player_profile.fitness_level, "starter")
         self.assertEqual(
             response.data["position"],
             {
@@ -123,6 +142,57 @@ class CoachCreatePlayerFlowTests(TestCase):
                 "code": self.central_midfielder.code,
             },
         )
+
+    def test_reassign_keeps_optional_profile_values_when_omitted(self):
+        old_coach = User.objects.create_user(
+            email="keepercoach@example.com",
+            password="StrongPass123!",
+            name="Keeper Coach",
+        )
+        UserRole.objects.create(user=old_coach, role=self.coach_role)
+        CoachProfile.objects.create(user=old_coach, approval_status="APPROVED")
+        player = User.objects.create_user(
+            email="player4@example.com",
+            password="StrongPass123!",
+            name="Stable Player",
+        )
+        UserRole.objects.create(user=player, role=self.player_role)
+        PlayerProfile.objects.create(
+            user=player,
+            coach=old_coach,
+            position=self.right_winger,
+            login_status="complete",
+            height_cm=177,
+            weight_kg=70,
+            age=23,
+            phone="0505556666",
+            foot=PlayerProfile.FOOT_RIGHT,
+            state=PlayerProfile.STATE_NEEDS_REVIEW,
+            fitness_level="elite",
+        )
+
+        response = self.client.post(
+            "/api/coach/create-player/",
+            {
+                "name": "Stable Player",
+                "email": "player4@example.com",
+                "position_id": self.right_winger.id,
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+
+        player.refresh_from_db()
+        self.assertEqual(player.player_profile.coach, self.coach)
+        self.assertEqual(player.player_profile.position, self.right_winger)
+        self.assertEqual(player.player_profile.height_cm, 177)
+        self.assertEqual(player.player_profile.weight_kg, 70)
+        self.assertEqual(player.player_profile.age, 23)
+        self.assertEqual(player.player_profile.phone, "0505556666")
+        self.assertEqual(player.player_profile.foot, PlayerProfile.FOOT_RIGHT)
+        self.assertEqual(player.player_profile.state, PlayerProfile.STATE_NEEDS_REVIEW)
+        self.assertEqual(player.player_profile.fitness_level, "elite")
 
     def test_duplicate_player_for_same_coach_returns_conflict(self):
         player = User.objects.create_user(
@@ -135,7 +205,6 @@ class CoachCreatePlayerFlowTests(TestCase):
             user=player,
             coach=self.coach,
             position=self.striker,
-            position_label=self.striker.name,
             login_status="complete",
         )
 

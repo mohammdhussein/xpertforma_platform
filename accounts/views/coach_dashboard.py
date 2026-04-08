@@ -83,11 +83,11 @@ class CoachDashboardAPIView(APIView):
         # last_activity: latest PlayerSessionProgress.updated_at if you have it
         # If not, return null.
         my_players = []
-        for pp in players_qs.order_by("user__name")[:4]:
+        for pp in players_qs.order_by("user__first_name", "user__last_name", "user__email")[:4]:
             my_players.append({
                 "id": pp.user.id,
                 "name": pp.user.name,
-                "position": build_position_payload(pp.position, pp.position_label),
+                "position": build_position_payload(pp.position),
                 "last_activity": pp.user.last_seen_at,
                 "avatar_url": pp.avatar,
             })

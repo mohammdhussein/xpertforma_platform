@@ -148,10 +148,6 @@ def complete_password_setup(raw_token, password):
     user.set_password(password)
     user.save(update_fields=["password"])
 
-    if hasattr(user, "player_profile"):
-        user.player_profile.login_status = "complete"
-        user.player_profile.save(update_fields=["login_status"])
-
     now = timezone.now()
     token_record.is_used = True
     token_record.expires_at = now

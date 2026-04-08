@@ -19,7 +19,6 @@ class UserInfoTests(TestCase):
         PlayerProfile.objects.create(
             user=self.player,
             position=self.striker,
-            position_label=self.striker.name,
             login_status="complete",
         )
 

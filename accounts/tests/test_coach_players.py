@@ -33,7 +33,11 @@ class CoachPlayersListTests(TestCase):
             user=self.player_one,
             coach=self.coach,
             position=self.striker,
-            position_label=self.striker.name,
+            age=19,
+            phone="0501234567",
+            foot=PlayerProfile.FOOT_RIGHT,
+            state=PlayerProfile.STATE_INJURED,
+            avatar="player_avatars/alpha.png",
         )
 
         self.player_two = User.objects.create_user(
@@ -46,7 +50,7 @@ class CoachPlayersListTests(TestCase):
             user=self.player_two,
             coach=self.coach,
             position=self.central_midfielder,
-            position_label=self.central_midfielder.name,
+            state=PlayerProfile.STATE_NEEDS_REVIEW,
         )
 
         self.client.force_authenticate(user=self.coach)
@@ -67,9 +71,18 @@ class CoachPlayersListTests(TestCase):
                     "name": self.striker.name,
                     "code": self.striker.code,
                 },
-                "state": "active",
+                "state": PlayerProfile.STATE_INJURED,
+                "avatar_url": "/media/player_avatars/alpha.png",
             },
         )
+
+    def test_players_endpoint_filters_by_state_tab(self):
+        response = self.client.get("/api/coach/players/?tab=needs_review")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.data["players"]), 1)
+        self.assertEqual(response.data["players"][0]["id"], str(self.player_two.id))
+        self.assertEqual(response.data["players"][0]["state"], PlayerProfile.STATE_NEEDS_REVIEW)
 
     def test_player_profile_endpoint_uses_shorter_path(self):
         plan = TrainingPlan.objects.create(
@@ -85,6 +98,10 @@ class CoachPlayersListTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data["id"], str(self.player_one.id))
+        self.assertEqual(response.data["age"], 19)
+        self.assertEqual(response.data["phone"], "0501234567")
+        self.assertEqual(response.data["foot"], PlayerProfile.FOOT_RIGHT)
+        self.assertEqual(response.data["state"], PlayerProfile.STATE_INJURED)
         self.assertEqual(
             response.data["position"],
             {"id": self.striker.id, "name": self.striker.name, "code": self.striker.code},
