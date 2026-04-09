@@ -18,7 +18,9 @@ from accounts.services.password_setup import (
     get_valid_password_setup_token,
 )
 from accounts.statuses import (
+    PLAYER_LOGIN_STATUS_FIRST_LOGIN,
     is_pending_coach_approval_status,
+    normalize_player_login_status,
     is_rejected_coach_approval_status,
     normalize_coach_approval_status,
 )
@@ -118,7 +120,7 @@ class LoginTokenOnlySerializer(TokenObtainPairSerializer):
             coach_profile = user.coach_profile
             register_status = normalize_coach_approval_status(coach_profile.approval_status)
             if is_pending_coach_approval_status(register_status) or is_rejected_coach_approval_status(register_status):
-                raise serializers.ValidationError({"register_status": "PENDING"})
+                raise serializers.ValidationError({f"coach_status": {"register_status": f"{register_status}"}})
 
             data["coach_status"] = {
                 "register_status": register_status,
@@ -128,13 +130,10 @@ class LoginTokenOnlySerializer(TokenObtainPairSerializer):
         if is_player and hasattr(user, "player_profile"):
             player_profile = user.player_profile
             has_coach = bool(player_profile.coach_id)
-
-            raw_login_status = player_profile.login_status or "first_login"
-            # API-friendly value: "first-login" or "complete"
-            if raw_login_status == "first_login":
-                login_status = "first-login"
-            else:
-                login_status = raw_login_status
+            login_status = normalize_player_login_status(
+                player_profile.login_status,
+                default=PLAYER_LOGIN_STATUS_FIRST_LOGIN,
+            )
 
             data["player_status"] = {
                 "has_coach": has_coach,
@@ -172,10 +171,10 @@ class CompleteSetPasswordSerializer(serializers.Serializer):
         try:
             token_record = get_valid_password_setup_token(attrs["token"])
         except (
-            InvalidPasswordSetupTokenError,
-            ExpiredPasswordSetupTokenError,
-            UsedPasswordSetupTokenError,
-            PasswordSetupUserNotFoundError,
+                InvalidPasswordSetupTokenError,
+                ExpiredPasswordSetupTokenError,
+                UsedPasswordSetupTokenError,
+                PasswordSetupUserNotFoundError,
         ) as exc:
             raise _password_setup_error_to_validation_error(exc) from exc
 
@@ -194,10 +193,10 @@ class CompleteSetPasswordSerializer(serializers.Serializer):
                 self.validated_data["password"],
             )
         except (
-            InvalidPasswordSetupTokenError,
-            ExpiredPasswordSetupTokenError,
-            UsedPasswordSetupTokenError,
-            PasswordSetupUserNotFoundError,
+                InvalidPasswordSetupTokenError,
+                ExpiredPasswordSetupTokenError,
+                UsedPasswordSetupTokenError,
+                PasswordSetupUserNotFoundError,
         ) as exc:
             raise _password_setup_error_to_validation_error(exc) from exc
         except DjangoValidationError as exc:

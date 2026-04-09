@@ -279,7 +279,7 @@
 
         <div class="endpoint" data-search="POST /api/auth/login login access refresh jwt coach_status player_status">
             <div><span class="badge post">POST</span><span class="path">/api/auth/login/</span></div>
-            <p class="meta">Public. JWT login. Blocks coach accounts that are pending or rejected.</p>
+            <p class="meta">Public. JWT login. Blocks coach accounts that are pending or rejected. Player logins return <code>FIRST_LOGIN</code> or <code>COMPLETE</code> in <code>player_status.login_status</code>.</p>
             <div class="grid">
                 <div class="card">
                     <h4>Path Params</h4>
@@ -303,7 +303,15 @@
   },
   "player_status": {
     "has_coach": true,
-    "login_status": "complete"
+    "login_status": "COMPLETE"
+  }
+}</pre>
+                </div>
+                <div class="card">
+                    <h4>Response 400 (blocked coach)</h4>
+                    <pre>{
+  "coach_status": {
+    "register_status": "PENDING"
   }
 }</pre>
                 </div>
@@ -884,7 +892,7 @@
 
         <div class="endpoint" data-search="GET PATCH PUT /api/player/profile player profile onboarding height_cm weight_kg date_of_birth phone foot login_status team_id avatar_url position">
             <div><span class="badge get">GET</span><span class="badge patch">PATCH</span><span class="badge put">PUT</span><span class="path">/api/player/profile/</span></div>
-            <p class="meta">Authenticated player only. Returns the current player profile and updates the player-owned setup fields after password setup. Both <code>PATCH</code> and <code>PUT</code> are accepted. <code>login_status</code> becomes <code>complete</code> only when the player has an assigned position and all required setup fields are filled.</p>
+            <p class="meta">Authenticated player only. Returns the current player profile and updates the player-owned setup fields after password setup. Both <code>PATCH</code> and <code>PUT</code> are accepted. <code>login_status</code> becomes <code>COMPLETE</code> only when the player has an assigned position and all required setup fields are filled; otherwise it remains <code>FIRST_LOGIN</code>.</p>
             <div class="grid">
                 <div class="card">
                     <h4>Request Body (PATCH/PUT)</h4>
@@ -903,7 +911,7 @@
   "name": "Player Name",
   "email": "player@example.com",
   "date_of_birth": "2008-04-09",
-  "login_status": "complete",
+  "login_status": "COMPLETE",
   "position": {
     "id": 13,
     "name": "Center Forward",

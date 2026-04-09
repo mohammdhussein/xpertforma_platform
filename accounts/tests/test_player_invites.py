@@ -55,7 +55,7 @@ class CoachCreatePlayerFlowTests(TestCase):
         token_record = PasswordSetupToken.objects.get(user=player)
         self.assertTrue(hasattr(player, "player_profile"))
         self.assertEqual(player.player_profile.coach, self.coach)
-        self.assertEqual(player.player_profile.login_status, "first_login")
+        self.assertEqual(player.player_profile.login_status, "FIRST_LOGIN")
         self.assertEqual(player.player_profile.position, self.striker)
         self.assertIsNone(player.phone)
         self.assertIsNone(player.date_of_birth)

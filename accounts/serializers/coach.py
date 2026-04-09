@@ -7,6 +7,10 @@ from accounts.serializers.position import (
     PositionSummarySerializer,
     build_position_payload,
 )
+from accounts.statuses import (
+    PLAYER_LOGIN_STATUS_COMPLETE,
+    PLAYER_LOGIN_STATUS_FIRST_LOGIN,
+)
 
 
 class ConflictError(APIException):
@@ -66,7 +70,11 @@ class CoachCreatePlayerSerializer(serializers.Serializer):
         UserRole.objects.get_or_create(user=user, role=player_role)
         profile_defaults = {
             "coach": coach_user,
-            "login_status": "first_login" if password_setup_required else "complete",
+            "login_status": (
+                PLAYER_LOGIN_STATUS_FIRST_LOGIN
+                if password_setup_required
+                else PLAYER_LOGIN_STATUS_COMPLETE
+            ),
         }
         if existing_profile is None or "position" in validated:
             profile_defaults["position"] = validated.get("position")

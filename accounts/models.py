@@ -113,9 +113,9 @@ class PlayerProfile(models.Model):
     FOOT_LEFT = "left"
     FOOT_BOTH = "both"
     FOOT_CHOICES = [
-        (FOOT_RIGHT, "Right"),
-        (FOOT_LEFT, "Left"),
-        (FOOT_BOTH, "Both"),
+        (FOOT_RIGHT, "RIGHT"),
+        (FOOT_LEFT, "left"),
+        (FOOT_BOTH, "BOTH"),
     ]
 
     STATE_ACTIVE = "active"
@@ -146,7 +146,7 @@ class PlayerProfile(models.Model):
     position = models.ForeignKey("accounts.Position", on_delete=models.SET_NULL, null=True, blank=True,
                                  related_name="player_profiles")
     fitness_level = models.CharField(max_length=40, blank=True)
-    login_status = models.CharField(max_length=20, default="first_login")
+    login_status = models.CharField(max_length=20, default="FIRST_LOGIN")
     avatar = models.ImageField(upload_to="player_avatars/", null=True, blank=True)
 
     # team is in organizations app; use string ref to avoid circular imports

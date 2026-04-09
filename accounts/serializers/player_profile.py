@@ -3,6 +3,11 @@ from rest_framework import serializers
 from accounts.files import build_media_value_url
 from accounts.models import PlayerProfile
 from accounts.serializers.position import PositionSummarySerializer, build_position_payload
+from accounts.statuses import (
+    PLAYER_LOGIN_STATUS_COMPLETE,
+    PLAYER_LOGIN_STATUS_FIRST_LOGIN,
+    normalize_player_login_status,
+)
 
 
 def is_player_profile_setup_complete(player_profile):
@@ -24,7 +29,10 @@ def build_player_profile_payload(player_profile):
         "name": player_profile.user.name,
         "email": player_profile.user.email,
         "date_of_birth": player_profile.user.date_of_birth,
-        "login_status": player_profile.login_status,
+        "login_status": normalize_player_login_status(
+            player_profile.login_status,
+            default=PLAYER_LOGIN_STATUS_FIRST_LOGIN,
+        ),
         "position": build_position_payload(player_profile.position),
         "team_id": str(player_profile.team_id) if getattr(player_profile, "team_id", None) else None,
         "avatar_url": build_media_value_url(player_profile.avatar),
@@ -82,7 +90,11 @@ class PlayerProfileUpdateSerializer(serializers.Serializer):
                 setattr(instance, field_name, validated_data[field_name])
                 update_fields.append(field_name)
 
-        next_login_status = "complete" if is_player_profile_setup_complete(instance) else "first_login"
+        next_login_status = (
+            PLAYER_LOGIN_STATUS_COMPLETE
+            if is_player_profile_setup_complete(instance)
+            else PLAYER_LOGIN_STATUS_FIRST_LOGIN
+        )
         if instance.login_status != next_login_status:
             instance.login_status = next_login_status
             update_fields.append("login_status")

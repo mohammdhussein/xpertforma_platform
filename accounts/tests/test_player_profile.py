@@ -31,7 +31,7 @@ class PlayerProfileEndpointTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data["id"], str(self.player.id))
         self.assertEqual(response.data["email"], self.player.email)
-        self.assertEqual(response.data["login_status"], "first_login")
+        self.assertEqual(response.data["login_status"], "FIRST_LOGIN")
         self.assertEqual(response.data["position"], {"id": None, "name": "", "code": None})
         self.assertIsNone(response.data["team_id"])
         self.assertIsNone(response.data["avatar_url"])
@@ -61,7 +61,7 @@ class PlayerProfileEndpointTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.player.refresh_from_db()
         self.player.player_profile.refresh_from_db()
-        self.assertEqual(self.player.player_profile.login_status, "complete")
+        self.assertEqual(self.player.player_profile.login_status, "COMPLETE")
         self.assertEqual(self.player.player_profile.position, self.striker)
         self.assertEqual(self.player.player_profile.height_cm, 182.5)
         self.assertEqual(self.player.player_profile.weight_kg, 76.2)
@@ -76,7 +76,7 @@ class PlayerProfileEndpointTests(TestCase):
         self.assertEqual(response.data["weight_kg"], 76.2)
         self.assertEqual(response.data["date_of_birth"], "2008-04-09")
         self.assertEqual(response.data["phone"], "0501112222")
-        self.assertEqual(response.data["login_status"], "complete")
+        self.assertEqual(response.data["login_status"], "COMPLETE")
 
     def test_put_accepts_partial_profile_payload_without_marking_complete(self):
         self.client.force_authenticate(user=self.player)
@@ -92,14 +92,14 @@ class PlayerProfileEndpointTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.player.refresh_from_db()
         self.player.player_profile.refresh_from_db()
-        self.assertEqual(self.player.player_profile.login_status, "first_login")
+        self.assertEqual(self.player.player_profile.login_status, "FIRST_LOGIN")
         self.assertIsNone(self.player.player_profile.position)
         self.assertEqual(self.player.player_profile.height_cm, 180)
         self.assertIsNone(self.player.date_of_birth)
         self.assertIsNone(self.player.phone)
         self.assertIsNone(self.player.player_profile.foot)
         self.assertIsNone(self.player.player_profile.weight_kg)
-        self.assertEqual(response.data["login_status"], "first_login")
+        self.assertEqual(response.data["login_status"], "FIRST_LOGIN")
 
     def test_profile_update_rejects_removed_fields(self):
         self.client.force_authenticate(user=self.player)
