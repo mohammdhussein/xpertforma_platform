@@ -1,3 +1,4 @@
+from datetime import date
 from urllib.parse import parse_qs, urlparse
 
 from django.core import mail
@@ -56,10 +57,10 @@ class CoachCreatePlayerFlowTests(TestCase):
         self.assertEqual(player.player_profile.coach, self.coach)
         self.assertEqual(player.player_profile.login_status, "first_login")
         self.assertEqual(player.player_profile.position, self.striker)
+        self.assertIsNone(player.phone)
+        self.assertIsNone(player.date_of_birth)
         self.assertIsNone(player.player_profile.height_cm)
         self.assertIsNone(player.player_profile.weight_kg)
-        self.assertIsNone(player.player_profile.age)
-        self.assertIsNone(player.player_profile.phone)
         self.assertIsNone(player.player_profile.foot)
         self.assertEqual(player.player_profile.state, PlayerProfile.STATE_ACTIVE)
         self.assertEqual(player.player_profile.fitness_level, "")
@@ -91,6 +92,8 @@ class CoachCreatePlayerFlowTests(TestCase):
             email="player2@example.com",
             password="StrongPass123!",
             name="Existing Player",
+            phone="0509990000",
+            date_of_birth=date(2002, 1, 2),
         )
         UserRole.objects.create(user=player, role=self.player_role)
         PlayerProfile.objects.create(
@@ -100,8 +103,6 @@ class CoachCreatePlayerFlowTests(TestCase):
             login_status="complete",
             height_cm=174,
             weight_kg=67,
-            age=24,
-            phone="0509990000",
             foot=PlayerProfile.FOOT_RIGHT,
             state=PlayerProfile.STATE_NEEDS_REVIEW,
             fitness_level="starter",
@@ -126,11 +127,11 @@ class CoachCreatePlayerFlowTests(TestCase):
 
         player.refresh_from_db()
         self.assertEqual(player.player_profile.coach, self.coach)
+        self.assertEqual(player.phone, "0509990000")
+        self.assertEqual(player.date_of_birth, date(2002, 1, 2))
         self.assertEqual(player.player_profile.position, self.central_midfielder)
         self.assertEqual(player.player_profile.height_cm, 174)
         self.assertEqual(player.player_profile.weight_kg, 67)
-        self.assertEqual(player.player_profile.age, 24)
-        self.assertEqual(player.player_profile.phone, "0509990000")
         self.assertEqual(player.player_profile.foot, PlayerProfile.FOOT_RIGHT)
         self.assertEqual(player.player_profile.state, PlayerProfile.STATE_NEEDS_REVIEW)
         self.assertEqual(player.player_profile.fitness_level, "starter")
@@ -155,6 +156,8 @@ class CoachCreatePlayerFlowTests(TestCase):
             email="player4@example.com",
             password="StrongPass123!",
             name="Stable Player",
+            phone="0505556666",
+            date_of_birth=date(2003, 1, 2),
         )
         UserRole.objects.create(user=player, role=self.player_role)
         PlayerProfile.objects.create(
@@ -164,8 +167,6 @@ class CoachCreatePlayerFlowTests(TestCase):
             login_status="complete",
             height_cm=177,
             weight_kg=70,
-            age=23,
-            phone="0505556666",
             foot=PlayerProfile.FOOT_RIGHT,
             state=PlayerProfile.STATE_NEEDS_REVIEW,
             fitness_level="elite",
@@ -185,11 +186,11 @@ class CoachCreatePlayerFlowTests(TestCase):
 
         player.refresh_from_db()
         self.assertEqual(player.player_profile.coach, self.coach)
+        self.assertEqual(player.phone, "0505556666")
+        self.assertEqual(player.date_of_birth, date(2003, 1, 2))
         self.assertEqual(player.player_profile.position, self.right_winger)
         self.assertEqual(player.player_profile.height_cm, 177)
         self.assertEqual(player.player_profile.weight_kg, 70)
-        self.assertEqual(player.player_profile.age, 23)
-        self.assertEqual(player.player_profile.phone, "0505556666")
         self.assertEqual(player.player_profile.foot, PlayerProfile.FOOT_RIGHT)
         self.assertEqual(player.player_profile.state, PlayerProfile.STATE_NEEDS_REVIEW)
         self.assertEqual(player.player_profile.fitness_level, "elite")
