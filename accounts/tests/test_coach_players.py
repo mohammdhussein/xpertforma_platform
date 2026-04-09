@@ -1,11 +1,19 @@
-from datetime import timedelta
+from datetime import date, time, timedelta
 
 from django.test import TestCase
 from django.utils import timezone
 from rest_framework.test import APIClient
 
-from accounts.models import CoachProfile, PlayerProfile, Position, Role, User, UserRole
-from training.models import TrainingPlan, TrainingPlanPlayer
+from accounts.models import (
+    CoachProfile,
+    PlayerPerformanceSnapshot,
+    PlayerProfile,
+    Position,
+    Role,
+    User,
+    UserRole,
+)
+from training.models import PlayerSessionProgress, TrainingPlan, TrainingPlanPlayer, TrainingSession
 
 
 class CoachPlayersListTests(TestCase):
@@ -27,14 +35,16 @@ class CoachPlayersListTests(TestCase):
             email="alpha@example.com",
             password="StrongPass123!",
             name="Alpha Player",
+            phone="0501234567",
+            date_of_birth=date(2004, 6, 15),
         )
         UserRole.objects.create(user=self.player_one, role=self.player_role)
         PlayerProfile.objects.create(
             user=self.player_one,
             coach=self.coach,
             position=self.striker,
-            age=19,
-            phone="0501234567",
+            height_cm=185,
+            weight_kg=78,
             foot=PlayerProfile.FOOT_RIGHT,
             state=PlayerProfile.STATE_INJURED,
             avatar="player_avatars/alpha.png",
@@ -84,26 +94,254 @@ class CoachPlayersListTests(TestCase):
         self.assertEqual(response.data["players"][0]["id"], str(self.player_two.id))
         self.assertEqual(response.data["players"][0]["state"], PlayerProfile.STATE_NEEDS_REVIEW)
 
-    def test_player_profile_endpoint_uses_shorter_path(self):
-        plan = TrainingPlan.objects.create(
+    def test_player_profile_endpoint_returns_computed_overview_payload(self):
+        today = timezone.localdate()
+        now = timezone.now()
+        active_plan = TrainingPlan.objects.create(
             creator=self.coach,
-            title="Profile Plan",
-            start_date=timezone.localdate(),
-            end_date=timezone.localdate() + timedelta(days=7),
+            title="Speed & Agility Program",
+            start_date=today - timedelta(days=5),
+            end_date=today + timedelta(days=5),
             status="draft",
         )
-        TrainingPlanPlayer.objects.create(plan=plan, player=self.player_one, assigned_by=self.coach)
+        completed_plan = TrainingPlan.objects.create(
+            creator=self.coach,
+            title="Shooting Technique",
+            start_date=today - timedelta(days=12),
+            end_date=today - timedelta(days=9),
+            status="draft",
+        )
+        TrainingPlanPlayer.objects.create(plan=active_plan, player=self.player_one, assigned_by=self.coach)
+        TrainingPlanPlayer.objects.create(plan=completed_plan, player=self.player_one, assigned_by=self.coach)
+
+        speed_session = TrainingSession.objects.create(
+            plan=active_plan,
+            title="Speed & Agility Training",
+            session_date=today - timedelta(days=3),
+            session_type=TrainingSession.SESSION_TYPE_GROUP,
+            start_time=time(16, 0),
+            end_time=time(17, 30),
+        )
+        shooting_session = TrainingSession.objects.create(
+            plan=active_plan,
+            title="Shooting Practice",
+            session_date=today - timedelta(days=2),
+            session_type=TrainingSession.SESSION_TYPE_GROUP,
+            start_time=time(18, 0),
+            end_time=time(19, 0),
+        )
+        tactics_session = TrainingSession.objects.create(
+            plan=active_plan,
+            title="Team Tactics",
+            session_date=today - timedelta(days=1),
+            session_type=TrainingSession.SESSION_TYPE_TEAM,
+            start_time=time(16, 30),
+            end_time=time(18, 0),
+        )
+        future_session = TrainingSession.objects.create(
+            plan=active_plan,
+            title="Endurance Building",
+            session_date=today + timedelta(days=1),
+            session_type=TrainingSession.SESSION_TYPE_GROUP,
+            start_time=time(17, 0),
+            end_time=time(18, 30),
+        )
+        completed_plan_session = TrainingSession.objects.create(
+            plan=completed_plan,
+            title="Finishing Session",
+            session_date=today - timedelta(days=10),
+            session_type=TrainingSession.SESSION_TYPE_GROUP,
+            start_time=time(10, 0),
+            end_time=time(11, 0),
+        )
+
+        speed_progress = PlayerSessionProgress.objects.create(
+            player=self.player_one,
+            session=speed_session,
+            status="complete",
+        )
+        shooting_progress = PlayerSessionProgress.objects.create(
+            player=self.player_one,
+            session=shooting_session,
+            status="completed",
+        )
+        tactics_progress = PlayerSessionProgress.objects.create(
+            player=self.player_one,
+            session=tactics_session,
+            status="in_progress",
+        )
+        completed_plan_progress = PlayerSessionProgress.objects.create(
+            player=self.player_one,
+            session=completed_plan_session,
+            status="complete",
+        )
+
+        PlayerSessionProgress.objects.filter(pk=speed_progress.pk).update(updated_at=now - timedelta(days=3))
+        PlayerSessionProgress.objects.filter(pk=shooting_progress.pk).update(updated_at=now - timedelta(days=2))
+        PlayerSessionProgress.objects.filter(pk=tactics_progress.pk).update(updated_at=now - timedelta(hours=2))
+        PlayerSessionProgress.objects.filter(pk=completed_plan_progress.pk).update(updated_at=now - timedelta(days=5))
+
+        PlayerPerformanceSnapshot.objects.create(
+            player=self.player_one,
+            recorded_by=self.coach,
+            speed=88,
+            stamina=70,
+            strength=78,
+            skills=85,
+        )
+        PlayerPerformanceSnapshot.objects.create(
+            player=self.player_one,
+            recorded_by=self.coach,
+            speed=88,
+            stamina=62,
+            strength=78,
+            skills=85,
+        )
 
         response = self.client.get(f"/api/coach/players/{self.player_one.id}/")
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.data["id"], str(self.player_one.id))
-        self.assertEqual(response.data["age"], 19)
-        self.assertEqual(response.data["phone"], "0501234567")
-        self.assertEqual(response.data["foot"], PlayerProfile.FOOT_RIGHT)
-        self.assertEqual(response.data["state"], PlayerProfile.STATE_INJURED)
         self.assertEqual(
-            response.data["position"],
-            {"id": self.striker.id, "name": self.striker.name, "code": self.striker.code},
+            response.data["player"],
+            {
+                "id": str(self.player_one.id),
+                "name": "Alpha Player",
+                "dateOfBirth": "2004-06-15",
+                "position": self.striker.name,
+                "phone": "0501234567",
+                "heightCm": 185.0,
+                "weightKg": 78.0,
+                "foot": "Right",
+            },
         )
+        self.assertEqual(
+            response.data["overview"]["keyMetrics"],
+            {
+                "progressRate": {"value": 60, "trend": "down"},
+                "attendance": {"completed": 3, "total": 4, "rate": 75},
+                "consistency": {"streakDays": 0},
+                "focusArea": {"name": "Endurance", "trend": "down"},
+            },
+        )
+        self.assertEqual(
+            response.data["overview"]["needsAttention"],
+            [
+                {
+                    "id": "missed_last_session",
+                    "message": "Missed last training session",
+                    "severity": "warning",
+                },
+                {
+                    "id": "declining_focus_area",
+                    "message": "Recent performance is declining in endurance",
+                    "severity": "info",
+                },
+            ],
+        )
+        self.assertEqual(
+            response.data["overview"]["recentActivity"],
+            [
+                {
+                    "id": str(tactics_session.session_id),
+                    "title": "Team Tactics",
+                    "date": str(today - timedelta(days=1)),
+                    "timeRange": "16:30 - 18:00",
+                    "durationMinutes": 90,
+                    "status": "missed",
+                },
+                {
+                    "id": str(shooting_session.session_id),
+                    "title": "Shooting Practice",
+                    "date": str(today - timedelta(days=2)),
+                    "timeRange": "18:00 - 19:00",
+                    "durationMinutes": 60,
+                    "status": "completed",
+                },
+                {
+                    "id": str(speed_session.session_id),
+                    "title": "Speed & Agility Training",
+                    "date": str(today - timedelta(days=3)),
+                    "timeRange": "16:00 - 17:30",
+                    "durationMinutes": 90,
+                    "status": "completed",
+                },
+            ],
+        )
+        self.assertIn("Attendance is moderate and consistency can improve.", response.data["overview"]["coachInsight"])
+        self.assertIn("The player is making steady progress across assigned plans.", response.data["overview"]["coachInsight"])
+        self.assertIn("Current focus area is Endurance.", response.data["overview"]["coachInsight"])
+        self.assertIn("Recent performance in Endurance is declining.", response.data["overview"]["coachInsight"])
+        self.assertIn("The most recent scheduled session was missed.", response.data["overview"]["coachInsight"])
+        self.assertEqual(
+            response.data["stats"],
+            {
+                "performanceMetrics": [
+                    {"name": "Speed", "value": 88},
+                    {"name": "Stamina", "value": 62},
+                    {"name": "Strength", "value": 78},
+                    {"name": "Skills", "value": 85},
+                ],
+                "achievements": {
+                    "plansDone": 1,
+                    "bestStreak": 3,
+                },
+            },
+        )
+        self.assertEqual(response.data["plans"][0]["title"], "Speed & Agility Program")
+        self.assertEqual(response.data["plans"][0]["status"], "active")
+        self.assertEqual(response.data["plans"][0]["progress"], 50)
+        self.assertEqual(response.data["plans"][0]["completedSessions"], 2)
+        self.assertEqual(response.data["plans"][0]["remainingSessions"], 2)
+        self.assertEqual(response.data["plans"][0]["lastActivity"], "2 hours ago")
+        self.assertEqual(response.data["plans"][1]["title"], "Shooting Technique")
+        self.assertEqual(response.data["plans"][1]["status"], "completed")
+        self.assertEqual(response.data["plans"][1]["progress"], 100)
+        self.assertEqual(response.data["plans"][1]["completedSessions"], 1)
+        self.assertEqual(response.data["plans"][1]["remainingSessions"], 0)
+        self.assertEqual(response.data["plans"][1]["lastActivity"], "5 days ago")
 
+    def test_player_profile_endpoint_handles_empty_training_state(self):
+        response = self.client.get(f"/api/coach/players/{self.player_two.id}/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.data["player"],
+            {
+                "id": str(self.player_two.id),
+                "name": "Beta Player",
+                "dateOfBirth": None,
+                "position": self.central_midfielder.name,
+                "phone": None,
+                "heightCm": None,
+                "weightKg": None,
+                "foot": None,
+            },
+        )
+        self.assertEqual(response.data["overview"]["needsAttention"], [])
+        self.assertEqual(
+            response.data["overview"]["keyMetrics"],
+            {
+                "progressRate": {"value": 0, "trend": "flat"},
+                "attendance": {"completed": 0, "total": 0, "rate": 0},
+                "consistency": {"streakDays": 0},
+                "focusArea": {"name": None, "trend": "flat"},
+            },
+        )
+        self.assertEqual(response.data["overview"]["coachInsight"], "Not enough recent training data to generate insight.")
+        self.assertEqual(response.data["overview"]["recentActivity"], [])
+        self.assertEqual(
+            response.data["stats"],
+            {
+                "performanceMetrics": [
+                    {"name": "Speed", "value": None},
+                    {"name": "Stamina", "value": None},
+                    {"name": "Strength", "value": None},
+                    {"name": "Skills", "value": None},
+                ],
+                "achievements": {
+                    "plansDone": 0,
+                    "bestStreak": 0,
+                },
+            },
+        )
+        self.assertEqual(response.data["plans"], [])

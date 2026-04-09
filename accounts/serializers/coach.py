@@ -96,32 +96,93 @@ class PlayerListResponseSerializer(serializers.Serializer):
     players = PlayerCardSerializer(many=True)
 
 
-class PlanProgressSerializer(serializers.Serializer):
-    plan_id = serializers.UUIDField()
-    title = serializers.CharField()
-    started_at = serializers.DateField()
-    status = serializers.CharField()  # active / completed
-    overall_progress_percent = serializers.IntegerField()
-    completed_sessions = serializers.IntegerField()
-    remaining_sessions = serializers.IntegerField()
-
-
-class PlayerHeaderSerializer(serializers.Serializer):
+class CoachPlayerDetailPlayerSerializer(serializers.Serializer):
     id = serializers.UUIDField()
     name = serializers.CharField()
-    age = serializers.IntegerField(allow_null=True)
+    dateOfBirth = serializers.DateField(allow_null=True)
+    position = serializers.CharField(allow_null=True)
     phone = serializers.CharField(allow_blank=True, allow_null=True)
+    heightCm = serializers.FloatField(allow_null=True)
+    weightKg = serializers.FloatField(allow_null=True)
     foot = serializers.CharField(allow_null=True)
-    state = serializers.CharField()
-    position = PositionSummarySerializer()
+
+
+class CoachPlayerNeedsAttentionSerializer(serializers.Serializer):
+    id = serializers.CharField()
+    message = serializers.CharField()
+    severity = serializers.CharField()
+
+
+class CoachPlayerProgressRateSerializer(serializers.Serializer):
+    value = serializers.IntegerField()
+    trend = serializers.CharField()
+
+
+class CoachPlayerAttendanceSerializer(serializers.Serializer):
+    completed = serializers.IntegerField()
+    total = serializers.IntegerField()
+    rate = serializers.IntegerField()
+
+
+class CoachPlayerConsistencySerializer(serializers.Serializer):
+    streakDays = serializers.IntegerField()
+
+
+class CoachPlayerFocusAreaSerializer(serializers.Serializer):
+    name = serializers.CharField(allow_null=True)
+    trend = serializers.CharField()
+
+
+class CoachPlayerKeyMetricsSerializer(serializers.Serializer):
+    progressRate = CoachPlayerProgressRateSerializer()
+    attendance = CoachPlayerAttendanceSerializer()
+    consistency = CoachPlayerConsistencySerializer()
+    focusArea = CoachPlayerFocusAreaSerializer()
+
+
+class CoachPlayerRecentActivitySerializer(serializers.Serializer):
+    id = serializers.UUIDField()
+    title = serializers.CharField()
+    date = serializers.DateField()
+    timeRange = serializers.CharField()
+    durationMinutes = serializers.IntegerField()
+    status = serializers.CharField()
+
+
+class CoachPlayerOverviewSerializer(serializers.Serializer):
+    needsAttention = CoachPlayerNeedsAttentionSerializer(many=True)
+    keyMetrics = CoachPlayerKeyMetricsSerializer()
+    coachInsight = serializers.CharField()
+    recentActivity = CoachPlayerRecentActivitySerializer(many=True)
+
+
+class CoachPlayerPerformanceMetricSerializer(serializers.Serializer):
+    name = serializers.CharField()
+    value = serializers.IntegerField(allow_null=True)
+
+
+class CoachPlayerAchievementsSerializer(serializers.Serializer):
+    plansDone = serializers.IntegerField()
+    bestStreak = serializers.IntegerField()
+
+
+class CoachPlayerStatsSerializer(serializers.Serializer):
+    performanceMetrics = CoachPlayerPerformanceMetricSerializer(many=True)
+    achievements = CoachPlayerAchievementsSerializer()
+
+
+class CoachPlayerPlanSerializer(serializers.Serializer):
+    id = serializers.UUIDField()
+    title = serializers.CharField()
+    status = serializers.CharField()
+    progress = serializers.IntegerField()
+    completedSessions = serializers.IntegerField()
+    remainingSessions = serializers.IntegerField()
+    lastActivity = serializers.CharField(allow_null=True)
 
 
 class PlayerTrainingProgressResponseSerializer(serializers.Serializer):
-    id = serializers.UUIDField()
-    name = serializers.CharField()
-    age = serializers.IntegerField(allow_null=True)
-    phone = serializers.CharField(allow_blank=True, allow_null=True)
-    foot = serializers.CharField(allow_null=True)
-    state = serializers.CharField()
-    position = PositionSummarySerializer()
-    plans = PlanProgressSerializer(many=True)
+    player = CoachPlayerDetailPlayerSerializer()
+    overview = CoachPlayerOverviewSerializer()
+    stats = CoachPlayerStatsSerializer()
+    plans = CoachPlayerPlanSerializer(many=True)

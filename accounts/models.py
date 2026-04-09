@@ -1,5 +1,6 @@
 import uuid
 from django.conf import settings
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, BaseUserManager
 
@@ -41,6 +42,8 @@ class User(AbstractBaseUser, PermissionsMixin):
     first_name = models.CharField(max_length=120, blank=True)
     last_name = models.CharField(max_length=120, blank=True)
     email = models.EmailField(unique=True)
+    phone = models.CharField(max_length=32, null=True, blank=True)
+    date_of_birth = models.DateField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     last_login_at = models.DateTimeField(null=True, blank=True)
     last_seen_at = models.DateTimeField(null=True, blank=True)
@@ -138,8 +141,6 @@ class PlayerProfile(models.Model):
 
     height_cm = models.FloatField(null=True, blank=True)
     weight_kg = models.FloatField(null=True, blank=True)
-    age = models.PositiveSmallIntegerField(null=True, blank=True)
-    phone = models.CharField(max_length=32, null=True, blank=True)
     foot = models.CharField(max_length=10, choices=FOOT_CHOICES, null=True, blank=True)
     state = models.CharField(max_length=20, choices=STATE_CHOICES, default=STATE_ACTIVE)
     position = models.ForeignKey("accounts.Position", on_delete=models.SET_NULL, null=True, blank=True,
@@ -151,6 +152,36 @@ class PlayerProfile(models.Model):
     # team is in organizations app; use string ref to avoid circular imports
     team = models.ForeignKey("organizations.Team", on_delete=models.SET_NULL, null=True, blank=True,
                              related_name="players")
+
+
+class PlayerPerformanceSnapshot(models.Model):
+    METRIC_VALIDATORS = [MinValueValidator(0), MaxValueValidator(100)]
+
+    player = models.ForeignKey(
+        "accounts.User",
+        on_delete=models.CASCADE,
+        related_name="performance_snapshots",
+    )
+    recorded_by = models.ForeignKey(
+        "accounts.User",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="recorded_player_performance_snapshots",
+    )
+    recorded_at = models.DateTimeField(auto_now_add=True)
+    speed = models.PositiveSmallIntegerField(null=True, blank=True, validators=METRIC_VALIDATORS)
+    stamina = models.PositiveSmallIntegerField(null=True, blank=True, validators=METRIC_VALIDATORS)
+    strength = models.PositiveSmallIntegerField(null=True, blank=True, validators=METRIC_VALIDATORS)
+    skills = models.PositiveSmallIntegerField(null=True, blank=True, validators=METRIC_VALIDATORS)
+    note = models.TextField(blank=True)
+    focus_area_override = models.CharField(max_length=50, blank=True)
+
+    class Meta:
+        ordering = ["-recorded_at", "-id"]
+        indexes = [
+            models.Index(fields=["player", "recorded_at"]),
+        ]
 
 
 class ManagerProfile(models.Model):

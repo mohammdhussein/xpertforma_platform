@@ -575,9 +575,9 @@
             </div>
         </div>
 
-        <div class="endpoint" data-search="GET /api/coach/players/player_id player profile progress age phone foot state position plans overall_progress_percent completed_sessions remaining_sessions">
+        <div class="endpoint" data-search="GET /api/coach/players/player_id player overview stats plans dateOfBirth heightCm weightKg progressRate attendance coachInsight recentActivity performanceMetrics">
             <div><span class="badge get">GET</span><span class="path">/api/coach/players/&lt;player_id&gt;/</span></div>
-            <p class="meta">Authenticated coach only. Returns the player profile view, including training progress by plan, for one player that belongs to the signed-in coach.</p>
+            <p class="meta">Authenticated coach only. Returns the coach-facing player profile overview for one player that belongs to the signed-in coach. The response is grouped into player info, overview, stats, and plans.</p>
             <div class="grid">
                 <div class="card">
                     <h4>Path Params</h4>
@@ -586,26 +586,87 @@
                 <div class="card">
                     <h4>Response 200</h4>
                     <pre>{
-  "id": "uuid",
-  "name": "Jordan Smith",
-  "age": 19,
-  "phone": "0501234567",
-  "foot": "right",
-  "state": "active",
-  "position": {
-    "id": 12,
-    "name": "Striker",
-    "code": "ST"
+  "player": {
+    "id": "uuid",
+    "name": "Jordan Smith",
+    "dateOfBirth": "2004-06-15",
+    "position": "Striker",
+    "phone": "0501234567",
+    "heightCm": 185,
+    "weightKg": 78,
+    "foot": "Right"
+  },
+  "overview": {
+    "needsAttention": [
+      {
+        "id": "missed_last_session",
+        "message": "Missed last training session",
+        "severity": "warning"
+      }
+    ],
+    "keyMetrics": {
+      "progressRate": {
+        "value": 60,
+        "trend": "down"
+      },
+      "attendance": {
+        "completed": 3,
+        "total": 4,
+        "rate": 75
+      },
+      "consistency": {
+        "streakDays": 0
+      },
+      "focusArea": {
+        "name": "Endurance",
+        "trend": "down"
+      }
+    },
+    "coachInsight": "Attendance is moderate and consistency can improve. The player is making steady progress across assigned plans. Current focus area is Endurance. Recent performance in Endurance is declining. The most recent scheduled session was missed.",
+    "recentActivity": [
+      {
+        "id": "uuid",
+        "title": "Team Tactics",
+        "date": "2026-04-08",
+        "timeRange": "16:30 - 18:00",
+        "durationMinutes": 90,
+        "status": "missed"
+      }
+    ]
+  },
+  "stats": {
+    "performanceMetrics": [
+      {
+        "name": "Speed",
+        "value": 88
+      },
+      {
+        "name": "Stamina",
+        "value": 62
+      },
+      {
+        "name": "Strength",
+        "value": 78
+      },
+      {
+        "name": "Skills",
+        "value": 85
+      }
+    ],
+    "achievements": {
+      "plansDone": 1,
+      "bestStreak": 3
+    }
   },
   "plans": [
     {
-      "plan_id": "uuid",
-      "title": "Pre-season Plan",
-      "started_at": "2026-04-01",
+      "id": "uuid",
+      "title": "Speed & Agility Program",
       "status": "active",
-      "overall_progress_percent": 50,
-      "completed_sessions": 3,
-      "remaining_sessions": 3
+      "progress": 50,
+      "completedSessions": 2,
+      "remainingSessions": 2,
+      "lastActivity": "2 hours ago"
     }
   ]
 }</pre>
@@ -821,21 +882,18 @@
     <section class="section api-section" id="player">
         <h2>Player</h2>
 
-        <div class="endpoint" data-search="GET PATCH PUT /api/player/profile player profile onboarding position_id height_cm weight_kg age phone foot state fitness_level login_status team_id avatar_url">
+        <div class="endpoint" data-search="GET PATCH PUT /api/player/profile player profile onboarding height_cm weight_kg date_of_birth phone foot login_status team_id avatar_url position">
             <div><span class="badge get">GET</span><span class="badge patch">PATCH</span><span class="badge put">PUT</span><span class="path">/api/player/profile/</span></div>
-            <p class="meta">Authenticated player only. Returns the current player profile and updates onboarding/profile details after password setup. Both <code>PATCH</code> and <code>PUT</code> are accepted.</p>
+            <p class="meta">Authenticated player only. Returns the current player profile and updates the player-owned setup fields after password setup. Both <code>PATCH</code> and <code>PUT</code> are accepted. <code>login_status</code> becomes <code>complete</code> only when the player has an assigned position and all required setup fields are filled.</p>
             <div class="grid">
                 <div class="card">
                     <h4>Request Body (PATCH/PUT)</h4>
                     <pre>{
-  "position_id": 13,
   "height_cm": 182.5,
   "weight_kg": 76.2,
-  "age": 18,
+  "date_of_birth": "2008-04-09",
   "phone": "0501112222",
-  "foot": "both",
-  "state": "active",
-  "fitness_level": "intermediate"
+  "foot": "both"
 }</pre>
                 </div>
                 <div class="card">
@@ -844,6 +902,7 @@
   "id": "uuid",
   "name": "Player Name",
   "email": "player@example.com",
+  "date_of_birth": "2008-04-09",
   "login_status": "complete",
   "position": {
     "id": 13,
@@ -854,11 +913,8 @@
   "avatar_url": null,
   "height_cm": 182.5,
   "weight_kg": 76.2,
-  "age": 18,
   "phone": "0501112222",
-  "foot": "both",
-  "state": "active",
-  "fitness_level": "intermediate"
+  "foot": "both"
 }</pre>
                 </div>
                 <div class="card">
@@ -867,6 +923,7 @@
                         <li><code>401</code> if the user is not authenticated</li>
                         <li><code>403</code> if the authenticated user is not a player</li>
                         <li><code>400</code> if any provided field is invalid</li>
+                        <li><code>400</code> if removed fields such as <code>position_id</code>, <code>state</code>, or <code>fitness_level</code> are sent</li>
                     </ul>
                 </div>
             </div>
