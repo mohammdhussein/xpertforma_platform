@@ -1,12 +1,15 @@
 import time
 
 from django.core.cache import cache
+from rest_framework import serializers
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
 from accounts.serializers.auth import CoachRegisterSerializer
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.exceptions import TokenError
 from accounts.serializers.auth import (
     CompleteSetPasswordSerializer,
     LoginTokenOnlySerializer,
@@ -43,6 +46,15 @@ class LogoutAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
+        refresh_token = request.data.get("refresh")
+        if not refresh_token:
+            raise serializers.ValidationError({"refresh": ["This field is required."]})
+
+        try:
+            RefreshToken(refresh_token).blacklist()
+        except TokenError as exc:
+            raise serializers.ValidationError({"refresh": [str(exc)]}) from exc
+
         access_token = request.auth
         jti = access_token["jti"]
         ttl = max(int(access_token["exp"]) - int(time.time()), 0)

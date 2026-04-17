@@ -2,7 +2,8 @@ from django.db.models import Count
 
 from accounts.serializers.position import build_position_payload
 from training.models import TrainingPlan, TrainingPlanPlayer
-from training.serializers.coach import TrainingPlanDetailSerializer
+from training.serializers.training_plans import TrainingPlanDetailSerializer
+from training.statuses import to_api_training_session_type
 
 
 def get_coach_training_plans_queryset(coach_user):
@@ -66,7 +67,7 @@ def build_training_plan_screen_payload(plan, request):
             {
                 "session_id": session.session_id,
                 "title": session.title or plan.title,
-                "session_type": session.session_type,
+                "session_type": to_api_training_session_type(session.session_type),
                 "start_time": session.start_time,
                 "end_time": session.end_time,
                 "time_range": _build_time_range(session.start_time, session.end_time),

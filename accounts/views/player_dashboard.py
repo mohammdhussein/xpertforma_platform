@@ -7,16 +7,13 @@ from rest_framework.views import APIView
 
 from accounts.permissions import IsPlayer
 from training.models import TrainingPlanPlayer, TrainingSession, PlayerSessionProgress
-from training.statuses import is_completed_player_session_status, normalize_player_session_status
+from training.statuses import (
+    is_completed_player_session_status,
+    normalize_player_session_status,
+    to_api_player_session_status,
+)
 from accounts.serializers.player_dashboard import PlayerDashboardSerializer
-
-
-def _duration_min(start_time, end_time):
-    if not start_time or not end_time:
-        return 0
-    start_dt = datetime.combine(timezone.localdate(), start_time)
-    end_dt = datetime.combine(timezone.localdate(), end_time)
-    return max(int((end_dt - start_dt).total_seconds() // 60), 0)
+from accounts.utils import duration_minutes
 
 
 def _build_weekly_completion_points(user, plan_ids, week_start, week_end):
@@ -50,7 +47,7 @@ def _build_weekly_completion_points(user, plan_ids, week_start, week_end):
         is_completed = is_completed_player_session_status(status)
         if is_completed:
             per_day_completed[day] = per_day_completed.get(day, 0) + 1
-            completed_minutes += _duration_min(s.start_time, s.end_time)
+            completed_minutes += duration_minutes(s.start_time, s.end_time)
 
     labels = ["M", "T", "W", "T", "F", "S", "S"]
     points = []
@@ -166,7 +163,7 @@ class PlayerDashboardAPIView(APIView):
                 player=user, session=next_session
             ).first()
             raw_status = progress.status if progress else "not_started"
-            status_label = normalize_player_session_status(raw_status)
+            status_label = to_api_player_session_status(raw_status)
 
             session_data = {
                 "session_id": next_session.session_id,
@@ -175,7 +172,7 @@ class PlayerDashboardAPIView(APIView):
                 "session_date": next_session.session_date,
                 "start_time": next_session.start_time,
                 "end_time": next_session.end_time,
-                "duration_min": _duration_min(next_session.start_time, next_session.end_time),
+                "duration_min": duration_minutes(next_session.start_time, next_session.end_time),
                 "status": status_label,
             }
 
@@ -233,4 +230,3 @@ class PlayerDashboardAPIView(APIView):
         }
 
         return Response(PlayerDashboardSerializer(payload).data)
-

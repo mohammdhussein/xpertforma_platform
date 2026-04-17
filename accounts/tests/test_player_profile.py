@@ -53,7 +53,7 @@ class PlayerProfileEndpointTests(TestCase):
                 "weight_kg": 76.2,
                 "date_of_birth": "2008-04-09",
                 "phone": "0501112222",
-                "foot": PlayerProfile.FOOT_BOTH,
+                "foot": "BOTH",
             },
             format="json",
         )
@@ -77,6 +77,7 @@ class PlayerProfileEndpointTests(TestCase):
         self.assertEqual(response.data["date_of_birth"], "2008-04-09")
         self.assertEqual(response.data["phone"], "0501112222")
         self.assertEqual(response.data["login_status"], "COMPLETE")
+        self.assertEqual(response.data["foot"], "BOTH")
 
     def test_put_accepts_partial_profile_payload_without_marking_complete(self):
         self.client.force_authenticate(user=self.player)
@@ -118,6 +119,18 @@ class PlayerProfileEndpointTests(TestCase):
         self.assertIn("position_id", response.data)
         self.assertIn("state", response.data)
         self.assertIn("fitness_level", response.data)
+
+    def test_profile_update_rejects_lowercase_foot(self):
+        self.client.force_authenticate(user=self.player)
+
+        response = self.client.patch(
+            "/api/player/profile/",
+            {"foot": "both"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.data["foot"], ["Use uppercase values."])
 
     def test_player_profile_endpoint_requires_player_user(self):
         coach = User.objects.create_user(

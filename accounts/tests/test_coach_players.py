@@ -81,18 +81,24 @@ class CoachPlayersListTests(TestCase):
                     "name": self.striker.name,
                     "code": self.striker.code,
                 },
-                "state": PlayerProfile.STATE_INJURED,
+                "state": "INJURED",
                 "avatar_url": "/media/player_avatars/alpha.png",
             },
         )
 
     def test_players_endpoint_filters_by_state_tab(self):
-        response = self.client.get("/api/coach/players/?tab=needs_review")
+        response = self.client.get("/api/coach/players/?tab=NEEDS_REVIEW")
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(len(response.data["players"]), 1)
         self.assertEqual(response.data["players"][0]["id"], str(self.player_two.id))
-        self.assertEqual(response.data["players"][0]["state"], PlayerProfile.STATE_NEEDS_REVIEW)
+        self.assertEqual(response.data["players"][0]["state"], "NEEDS_REVIEW")
+
+    def test_players_endpoint_rejects_lowercase_state_tab(self):
+        response = self.client.get("/api/coach/players/?tab=needs_review")
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.data, {"detail": "Invalid tab. Use uppercase values."})
 
     def test_player_profile_endpoint_returns_computed_overview_payload(self):
         today = timezone.localdate()
@@ -207,20 +213,25 @@ class CoachPlayersListTests(TestCase):
                 "id": str(self.player_one.id),
                 "name": "Alpha Player",
                 "dateOfBirth": "2004-06-15",
-                "position": self.striker.name,
+                "position": {
+                    "id": self.striker.id,
+                    "name": self.striker.name,
+                    "code": self.striker.code,
+                },
+                "avatar_url": "/media/player_avatars/alpha.png",
                 "phone": "0501234567",
                 "heightCm": 185.0,
                 "weightKg": 78.0,
-                "foot": "Right",
+                "foot": "RIGHT",
             },
         )
         self.assertEqual(
             response.data["overview"]["keyMetrics"],
             {
-                "progressRate": {"value": 60, "trend": "down"},
+                "progressRate": {"value": 60, "trend": "DOWN"},
                 "attendance": {"completed": 3, "total": 4, "rate": 75},
                 "consistency": {"streakDays": 0},
-                "focusArea": {"name": "Endurance", "trend": "down"},
+                "focusArea": {"name": "Endurance", "trend": "DOWN"},
             },
         )
         self.assertEqual(
@@ -229,12 +240,12 @@ class CoachPlayersListTests(TestCase):
                 {
                     "id": "missed_last_session",
                     "message": "Missed last training session",
-                    "severity": "warning",
+                    "severity": "WARNING",
                 },
                 {
                     "id": "declining_focus_area",
                     "message": "Recent performance is declining in endurance",
-                    "severity": "info",
+                    "severity": "INFO",
                 },
             ],
         )
@@ -245,33 +256,41 @@ class CoachPlayersListTests(TestCase):
                     "id": str(tactics_session.session_id),
                     "title": "Team Tactics",
                     "date": str(today - timedelta(days=1)),
-                    "timeRange": "16:30 - 18:00",
+                    "startTime": "16:30",
+                    "endTime": "18:00",
                     "durationMinutes": 90,
-                    "status": "missed",
+                    "status": "MISSED",
                 },
                 {
                     "id": str(shooting_session.session_id),
                     "title": "Shooting Practice",
                     "date": str(today - timedelta(days=2)),
-                    "timeRange": "18:00 - 19:00",
+                    "startTime": "18:00",
+                    "endTime": "19:00",
                     "durationMinutes": 60,
-                    "status": "completed",
+                    "status": "COMPLETED",
                 },
                 {
                     "id": str(speed_session.session_id),
                     "title": "Speed & Agility Training",
                     "date": str(today - timedelta(days=3)),
-                    "timeRange": "16:00 - 17:30",
+                    "startTime": "16:00",
+                    "endTime": "17:30",
                     "durationMinutes": 90,
-                    "status": "completed",
+                    "status": "COMPLETED",
                 },
             ],
         )
-        self.assertIn("Attendance is moderate and consistency can improve.", response.data["overview"]["coachInsight"])
-        self.assertIn("The player is making steady progress across assigned plans.", response.data["overview"]["coachInsight"])
-        self.assertIn("Current focus area is Endurance.", response.data["overview"]["coachInsight"])
-        self.assertIn("Recent performance in Endurance is declining.", response.data["overview"]["coachInsight"])
-        self.assertIn("The most recent scheduled session was missed.", response.data["overview"]["coachInsight"])
+        self.assertEqual(
+            response.data["overview"]["coachInsights"],
+            [
+                "Attendance is moderate and consistency can improve.",
+                "The player is making steady progress across assigned plans.",
+                "Current focus area is Endurance.",
+                "Recent performance in Endurance is declining.",
+                "The most recent scheduled session was missed.",
+            ],
+        )
         self.assertEqual(
             response.data["stats"],
             {
@@ -288,13 +307,13 @@ class CoachPlayersListTests(TestCase):
             },
         )
         self.assertEqual(response.data["plans"][0]["title"], "Speed & Agility Program")
-        self.assertEqual(response.data["plans"][0]["status"], "active")
+        self.assertEqual(response.data["plans"][0]["status"], "ACTIVE")
         self.assertEqual(response.data["plans"][0]["progress"], 50)
         self.assertEqual(response.data["plans"][0]["completedSessions"], 2)
         self.assertEqual(response.data["plans"][0]["remainingSessions"], 2)
         self.assertEqual(response.data["plans"][0]["lastActivity"], "2 hours ago")
         self.assertEqual(response.data["plans"][1]["title"], "Shooting Technique")
-        self.assertEqual(response.data["plans"][1]["status"], "completed")
+        self.assertEqual(response.data["plans"][1]["status"], "COMPLETED")
         self.assertEqual(response.data["plans"][1]["progress"], 100)
         self.assertEqual(response.data["plans"][1]["completedSessions"], 1)
         self.assertEqual(response.data["plans"][1]["remainingSessions"], 0)
@@ -310,7 +329,12 @@ class CoachPlayersListTests(TestCase):
                 "id": str(self.player_two.id),
                 "name": "Beta Player",
                 "dateOfBirth": None,
-                "position": self.central_midfielder.name,
+                "position": {
+                    "id": self.central_midfielder.id,
+                    "name": self.central_midfielder.name,
+                    "code": self.central_midfielder.code,
+                },
+                "avatar_url": None,
                 "phone": None,
                 "heightCm": None,
                 "weightKg": None,
@@ -321,13 +345,16 @@ class CoachPlayersListTests(TestCase):
         self.assertEqual(
             response.data["overview"]["keyMetrics"],
             {
-                "progressRate": {"value": 0, "trend": "flat"},
+                "progressRate": {"value": 0, "trend": "FLAT"},
                 "attendance": {"completed": 0, "total": 0, "rate": 0},
                 "consistency": {"streakDays": 0},
-                "focusArea": {"name": None, "trend": "flat"},
+                "focusArea": {"name": None, "trend": "FLAT"},
             },
         )
-        self.assertEqual(response.data["overview"]["coachInsight"], "Not enough recent training data to generate insight.")
+        self.assertEqual(
+            response.data["overview"]["coachInsights"],
+            ["Not enough recent training data to generate insight."],
+        )
         self.assertEqual(response.data["overview"]["recentActivity"], [])
         self.assertEqual(
             response.data["stats"],
@@ -345,3 +372,26 @@ class CoachPlayersListTests(TestCase):
             },
         )
         self.assertEqual(response.data["plans"], [])
+
+    def test_player_profile_endpoint_preserves_custom_focus_area_override(self):
+        PlayerPerformanceSnapshot.objects.create(
+            player=self.player_two,
+            recorded_by=self.coach,
+            speed=80,
+            stamina=81,
+            strength=82,
+            skills=83,
+            focus_area_override="Finishing",
+        )
+
+        response = self.client.get(f"/api/coach/players/{self.player_two.id}/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.data["overview"]["keyMetrics"]["focusArea"],
+            {"name": "Finishing", "trend": "FLAT"},
+        )
+        self.assertEqual(
+            response.data["overview"]["coachInsights"],
+            ["Current focus area is Finishing."],
+        )

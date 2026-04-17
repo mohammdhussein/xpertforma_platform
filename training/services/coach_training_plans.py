@@ -3,11 +3,12 @@ from django.utils.dateparse import parse_date
 from rest_framework import serializers
 
 from training.models import TrainingPlanPlayer, TrainingSession
-from training.serializers.coach import (
+from training.serializers.training_plans import (
     AssignPlayersSerializer,
     SessionCreateSerializer,
     TrainingPlanCreateSerializer,
 )
+from training.statuses import to_api_training_session_type
 
 
 def _normalize_sessions_payload(*, raw_sessions, start_date, end_date):
@@ -33,7 +34,10 @@ def _normalize_sessions_payload(*, raw_sessions, start_date, end_date):
         serializer = SessionCreateSerializer(
             data={
                 "title": session_payload.get("title", ""),
-                "session_type": session_payload.get("session_type", TrainingSession.SESSION_TYPE_GROUP),
+                "session_type": session_payload.get(
+                    "session_type",
+                    to_api_training_session_type(TrainingSession.SESSION_TYPE_GROUP),
+                ),
                 "start_time": session_payload.get("start_time"),
                 "end_time": session_payload.get("end_time"),
                 "notes": session_payload.get("notes", ""),

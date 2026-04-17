@@ -23,7 +23,7 @@ from django.urls import path, include
 
 def api_reference_view(request):
     return FileResponse(
-        open(Path(settings.BASE_DIR) / "api-reference.html", "rb"),
+        open(Path(settings.BASE_DIR) / "api-reference.html", "rb"),  # noqa: SIM115 — FileResponse closes the file
         content_type="text/html",
     )
 
@@ -34,13 +34,7 @@ urlpatterns = [
     path("api/auth/", include("accounts.urls.auth")),
     path("api/", include("accounts.urls.admin")),
     path("api/", include("accounts.urls.coach")),
-    path("api/", include("accounts.urls.coach_players")),
+    path("api/", include("accounts.urls.player")),
     path("api/", include("accounts.urls.common")),
-    path("api/", include("accounts.urls.coach_dashboard")),
-    path("api/", include("accounts.urls.player_dashboard")),
-    path("api/", include("accounts.urls.player_profile")),
-    path("api/", include("training.urls.player_training")),
-    path("api/", include("training.urls.coach")),
     path("api-reference/", api_reference_view),
-
 ]

@@ -65,7 +65,7 @@ class PlayerTrainingDayTests(TestCase):
         self.assertEqual(len(response.data["plans"]), 1)
         self.assertEqual(response.data["plans"][0]["sessions_count"], 2)
         self.assertFalse(response.data["plans"][0]["completed"])
-        self.assertEqual(response.data["plans"][0]["sessions"][0]["status"], "completed")
+        self.assertEqual(response.data["plans"][0]["sessions"][0]["status"], "COMPLETED")
 
     def test_training_day_rejects_invalid_date_format(self):
         response = self.client.get("/api/player/training/day/", {"date": "bad-date"})

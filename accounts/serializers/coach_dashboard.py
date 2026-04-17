@@ -1,6 +1,7 @@
 from rest_framework import serializers
 
 from accounts.serializers.position import PositionSummarySerializer
+from xpertforma_platform.api_fields import UppercaseTokenField
 
 
 class CoachDashboardStatsSerializer(serializers.Serializer):
@@ -23,7 +24,7 @@ class CoachUpcomingSessionSerializer(serializers.Serializer):
     title = serializers.CharField()
     session_date = serializers.DateField()
     start_time = serializers.TimeField(allow_null=True)
-    session_type = serializers.CharField()  # "group" / "team"
+    session_type = UppercaseTokenField()
     players_count = serializers.IntegerField()
     duration_min = serializers.IntegerField()
 

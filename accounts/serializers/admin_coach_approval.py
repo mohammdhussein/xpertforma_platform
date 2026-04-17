@@ -2,6 +2,7 @@ from rest_framework import serializers
 
 from accounts.files import build_media_value_url
 from accounts.models import CoachProfile
+from xpertforma_platform.api_fields import UppercaseTokenField
 
 
 class PendingCoachSerializer(serializers.ModelSerializer):
@@ -20,5 +21,5 @@ class PendingCoachSerializer(serializers.ModelSerializer):
 
 class CoachApprovalActionSerializer(serializers.Serializer):
     coach_id = serializers.UUIDField()
-    status = serializers.CharField()
+    status = UppercaseTokenField()
     reason = serializers.CharField(required=False, allow_blank=True)

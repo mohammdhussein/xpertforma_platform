@@ -38,7 +38,7 @@ def build_user_info_payload(user):
             "team_id": str(player_profile.team_id) if getattr(player_profile, "team_id", None) else None,
             "height_cm": getattr(player_profile, "height_cm", None),
             "weight_kg": getattr(player_profile, "weight_kg", None),
-            "avatar_url": player_profile.avatar.url if getattr(player_profile, "avatar", None) else None,
+            "avatar_url": build_media_value_url(getattr(player_profile, "avatar", None)),
         }
 
     return {

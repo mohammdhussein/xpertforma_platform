@@ -9,22 +9,16 @@ from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from accounts.files import build_media_value_url
 from accounts.permissions import IsApprovedCoach
 from accounts.models import PlayerProfile
 from accounts.serializers.position import build_position_payload
 from training.models import TrainingPlanPlayer, TrainingSession
-
+from training.statuses import to_api_training_session_type
+from accounts.utils import duration_minutes
 from accounts.serializers.coach_dashboard import CoachDashboardSerializer
 
 UPCOMING_SESSIONS_LIMIT = 3
-
-
-def _duration_min(start_time, end_time):
-    if not start_time or not end_time:
-        return 0
-    start_dt = datetime.combine(timezone.localdate(), start_time)
-    end_dt = datetime.combine(timezone.localdate(), end_time)
-    return max(int((end_dt - start_dt).total_seconds() // 60), 0)
 
 
 def _start_of_week_sunday(date_value):
@@ -89,7 +83,7 @@ class CoachDashboardAPIView(APIView):
                 "name": pp.user.name,
                 "position": build_position_payload(pp.position),
                 "last_activity": pp.user.last_seen_at,
-                "avatar_url": pp.avatar,
+                "avatar_url": build_media_value_url(pp.avatar),
             })
 
             # upcoming sessions (next 7 days)
@@ -123,9 +117,9 @@ class CoachDashboardAPIView(APIView):
                 "title": (s.title or s.plan.title),
                 "session_date": s.session_date,
                 "start_time": s.start_time,
-                "session_type": s.session_type,
+                "session_type": to_api_training_session_type(s.session_type),
                 "players_count": players_count_map.get(s.plan_id, 0),
-                "duration_min": _duration_min(s.start_time, s.end_time),
+                "duration_min": duration_minutes(s.start_time, s.end_time),
             })
 
         payload = {

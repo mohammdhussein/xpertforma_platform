@@ -1,10 +1,11 @@
 from rest_framework import serializers
 
 from accounts.serializers.position import PositionSummarySerializer
+from xpertforma_platform.api_fields import UppercaseTokenField
 
 
 class CoachUserInfoSerializer(serializers.Serializer):
-    approval_status = serializers.CharField()
+    approval_status = UppercaseTokenField()
     certificate_image = serializers.CharField(allow_null=True)
     approved_at = serializers.DateTimeField(allow_null=True)
     rejection_reason = serializers.CharField(allow_blank=True)

@@ -2,6 +2,9 @@ from rest_framework import serializers
 
 from accounts.serializers.position import PositionSummarySerializer
 from training.models import TrainingPlan, TrainingSession
+from training.statuses import parse_training_session_type_api_value
+from xpertforma_platform.api_fields import UppercaseTokenField
+from xpertforma_platform.api_values import normalize_api_value
 
 
 class TrainingPlanCreateSerializer(serializers.ModelSerializer):
@@ -21,6 +24,7 @@ class TrainingPlanCreateSerializer(serializers.ModelSerializer):
 class TrainingPlanDetailSerializer(serializers.ModelSerializer):
     total_sessions = serializers.IntegerField(read_only=True)
     assigned_players_count = serializers.IntegerField(source="assigned_players", read_only=True)
+    status = UppercaseTokenField()
 
     class Meta:
         model = TrainingPlan
@@ -33,14 +37,20 @@ class TrainingPlanListResponseSerializer(serializers.Serializer):
 
 class SessionCreateSerializer(serializers.Serializer):
     title = serializers.CharField(max_length=120, required=False, allow_blank=True)
-    session_type = serializers.ChoiceField(
-        choices=TrainingSession.SESSION_TYPE_CHOICES,
-        required=False,
-        default=TrainingSession.SESSION_TYPE_GROUP,
-    )
+    session_type = serializers.CharField(required=False, default="GROUP")
     start_time = serializers.TimeField(required=False, allow_null=True)
     end_time = serializers.TimeField(required=False, allow_null=True)
     notes = serializers.CharField(required=False, allow_blank=True)
+
+    def validate_session_type(self, value):
+        if value != normalize_api_value(value):
+            raise serializers.ValidationError("Use uppercase values.")
+
+        parsed = parse_training_session_type_api_value(value)
+        if parsed is None:
+            raise serializers.ValidationError("Invalid session_type.")
+
+        return parsed
 
     def validate(self, attrs):
         start_time = attrs.get("start_time")
@@ -54,6 +64,8 @@ class SessionCreateSerializer(serializers.Serializer):
 
 
 class TrainingSessionSerializer(serializers.ModelSerializer):
+    session_type = UppercaseTokenField()
+
     class Meta:
         model = TrainingSession
         fields = ["session_id", "plan", "session_date", "title", "session_type", "start_time", "end_time", "notes"]
@@ -70,7 +82,7 @@ class PlanAssignedPlayerSerializer(serializers.Serializer):
 class PlanSessionItemSerializer(serializers.Serializer):
     session_id = serializers.UUIDField()
     title = serializers.CharField()
-    session_type = serializers.CharField()
+    session_type = UppercaseTokenField()
     start_time = serializers.TimeField(allow_null=True)
     end_time = serializers.TimeField(allow_null=True)
     time_range = serializers.CharField()
@@ -87,7 +99,7 @@ class PlanScreenResponseSerializer(serializers.Serializer):
     title = serializers.CharField()
     start_date = serializers.DateField()
     end_date = serializers.DateField()
-    status = serializers.CharField()
+    status = UppercaseTokenField()
     total_sessions = serializers.IntegerField()
     assigned_players_count = serializers.IntegerField()
     assigned_players = PlanAssignedPlayerSerializer(many=True)

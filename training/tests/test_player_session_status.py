@@ -40,20 +40,30 @@ class PlayerSessionStatusTests(TestCase):
     def test_status_endpoint_updates_session_status(self):
         response = self.client.post(
             f"/api/player/training/sessions/{self.session.session_id}/status/",
-            {"status": "completed"},
+            {"status": "COMPLETED"},
             format="json",
         )
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(
             response.data,
-            {"session_id": str(self.session.session_id), "status": "completed"},
+            {"session_id": str(self.session.session_id), "status": "COMPLETED"},
         )
+
+    def test_status_endpoint_rejects_lowercase_status(self):
+        response = self.client.post(
+            f"/api/player/training/sessions/{self.session.session_id}/status/",
+            {"status": "completed"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.data, {"detail": "Invalid status. Use uppercase values."})
 
     def test_status_endpoint_rejects_unknown_status(self):
         response = self.client.post(
             f"/api/player/training/sessions/{self.session.session_id}/status/",
-            {"status": "paused"},
+            {"status": "PAUSED"},
             format="json",
         )
 

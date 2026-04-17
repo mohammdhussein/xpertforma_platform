@@ -1,7 +1,5 @@
-from django.db import models
-
-# organizations/models.py
 import uuid
+
 from django.db import models
 
 class Club(models.Model):

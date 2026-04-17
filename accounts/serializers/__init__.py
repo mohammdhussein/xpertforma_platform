@@ -1,4 +1,4 @@
-from .coach import (
+from .coach_players import (
     PlayerCardSerializer,
     PlayerListResponseSerializer,
     PlayerTrainingProgressResponseSerializer,

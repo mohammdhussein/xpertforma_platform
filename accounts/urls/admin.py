@@ -1,5 +1,6 @@
 from django.urls import path
-from ..views.admin_coaches import PendingCoachesAPIView, ApproveCoachAPIView, RejectCoachAPIView
+
+from accounts.views.admin_coach_approval import ApproveCoachAPIView, PendingCoachesAPIView, RejectCoachAPIView
 
 urlpatterns = [
     path("admin/coaches/pending/", PendingCoachesAPIView.as_view(), name="admin-coaches-pending"),
