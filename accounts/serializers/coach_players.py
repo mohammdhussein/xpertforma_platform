@@ -1,7 +1,7 @@
 from django.db import transaction
 from django.contrib.auth.hashers import is_password_usable
 from rest_framework import serializers
-from rest_framework.exceptions import APIException
+from accounts.exceptions import ConflictError
 from accounts.models import User, Role, UserRole, PlayerProfile, Position, split_full_name
 from accounts.serializers.position import (
     PositionSummarySerializer,
@@ -12,12 +12,6 @@ from accounts.statuses import (
     PLAYER_LOGIN_STATUS_FIRST_LOGIN,
 )
 from xpertforma_platform.api_fields import UppercaseTokenField
-
-
-class ConflictError(APIException):
-    status_code = 409
-    default_detail = "Conflict."
-    default_code = "conflict"
 
 
 class CoachCreatePlayerSerializer(serializers.Serializer):
