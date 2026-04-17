@@ -1,6 +1,10 @@
 import uuid
+from django.conf import settings
+from django.contrib.postgres.fields import ArrayField
 from django.db import models
 from django.core.exceptions import ValidationError
+
+from training.statuses import Intensity, InsightTag, SleepQuality
 
 
 class TrainingPlan(models.Model):
@@ -66,7 +70,16 @@ class TrainingSession(models.Model):
     )
     start_time = models.TimeField(null=True, blank=True)
     end_time = models.TimeField(null=True, blank=True)
-    notes = models.TextField(blank=True)
+    notes            = models.TextField(blank=True)
+    duration_minutes = models.PositiveIntegerField(null=True, blank=True)
+    intensity        = models.CharField(
+        max_length=10,
+        choices=Intensity.choices,
+        default=Intensity.MEDIUM,
+    )
+    location         = models.CharField(max_length=120, blank=True)
+    squad_size       = models.PositiveIntegerField(null=True, blank=True)
+    coach_note       = models.TextField(blank=True)
 
     class Meta:
         ordering = ["session_date", "start_time"]
@@ -104,3 +117,64 @@ class PlayerSessionProgress(models.Model):
 
     class Meta:
         unique_together = ("player", "session")
+
+
+class PlayerCheckin(models.Model):
+    id              = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    player          = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="checkins",
+    )
+    date            = models.DateField()
+    sleep_hours     = models.DecimalField(max_digits=4, decimal_places=2)
+    sleep_quality   = models.CharField(max_length=10, choices=SleepQuality.choices)
+    mood            = models.PositiveSmallIntegerField()
+    sore_zones      = ArrayField(models.CharField(max_length=20), default=list, blank=True)
+    readiness_score = models.PositiveSmallIntegerField()
+    created_at      = models.DateTimeField(auto_now_add=True)
+    updated_at      = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ("player", "date")
+        ordering = ["-date"]
+
+
+class WeeklyLoad(models.Model):
+    id                 = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    player             = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="weekly_loads",
+    )
+    week_start         = models.DateField()
+    distance_km        = models.DecimalField(max_digits=6, decimal_places=2, default=0)
+    acute_load         = models.IntegerField(default=0)
+    chronic_load       = models.IntegerField(default=0)
+    sessions_completed = models.PositiveIntegerField(default=0)
+    sessions_planned   = models.PositiveIntegerField(default=0)
+    streak_days        = models.PositiveIntegerField(default=0)
+    top_sprint_kmh     = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    top_sprint_pb_kmh  = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    created_at         = models.DateTimeField(auto_now_add=True)
+    updated_at         = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ("player", "week_start")
+
+
+class AIInsight(models.Model):
+    id         = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    player     = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="ai_insights",
+    )
+    date       = models.DateField()
+    tag        = models.CharField(max_length=15, choices=InsightTag.choices)
+    text       = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ("player", "date", "tag")
+        ordering = ["-date"]
