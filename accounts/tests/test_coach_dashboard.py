@@ -86,7 +86,7 @@ class CoachDashboardTests(TestCase):
             response.data["my_players"][0]["last_activity"],
             self.player.last_seen_at.isoformat().replace("+00:00", "Z"),
         )
-        self.assertEqual(response.data["upcoming_sessions"][0]["session_type"], TrainingSession.SESSION_TYPE_TEAM)
+        self.assertEqual(response.data["upcoming_sessions"][0]["session_type"], "TEAM")
 
     def test_dashboard_counts_sessions_this_week_from_sunday(self):
         mocked_today = timezone.datetime(2026, 4, 8).date()

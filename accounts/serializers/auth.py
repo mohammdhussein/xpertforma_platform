@@ -66,6 +66,17 @@ class CoachRegisterSerializer(serializers.Serializer):
         attrs["first_name"] = first_name
         attrs["last_name"] = last_name
         attrs["phone_number"] = phone_number or None
+
+        validation_user = User(
+            email=attrs["email"],
+            first_name=first_name,
+            last_name=last_name,
+        )
+        try:
+            validate_password(attrs["password"], user=validation_user)
+        except DjangoValidationError as exc:
+            raise serializers.ValidationError({"password": list(exc.messages)}) from exc
+
         return attrs
 
     @transaction.atomic

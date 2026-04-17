@@ -2,20 +2,20 @@ from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from accounts.permissions import IsCoach
-from training.selectors.coach_plans import build_training_plan_screen_payload, get_coach_training_plans_queryset
-from training.serializers.coach import (
+from accounts.permissions import IsApprovedCoach
+from training.queries.training_plans import build_training_plan_screen_payload, get_coach_training_plans_queryset
+from training.serializers.training_plans import (
     PlanScreenResponseSerializer,
     TrainingPlanCreateResultSerializer,
     TrainingPlanCreateSerializer,
     TrainingPlanDetailSerializer,
     TrainingPlanListResponseSerializer,
 )
-from training.services.coach_plans import create_coach_training_plan
+from training.services.coach_training_plans import create_coach_training_plan
 
 
 class CoachTrainingPlanViewSet(viewsets.ModelViewSet):
-    permission_classes = [IsAuthenticated, IsCoach]
+    permission_classes = [IsAuthenticated, IsApprovedCoach]
     lookup_field = "plan_id"
 
     def get_queryset(self):

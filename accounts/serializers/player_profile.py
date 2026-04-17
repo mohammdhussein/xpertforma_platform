@@ -7,6 +7,8 @@ from accounts.statuses import (
     PLAYER_LOGIN_STATUS_COMPLETE,
     PLAYER_LOGIN_STATUS_FIRST_LOGIN,
     normalize_player_login_status,
+    normalize_player_foot_status,
+    parse_player_foot_api_value,
 )
 
 
@@ -39,7 +41,7 @@ def build_player_profile_payload(player_profile):
         "height_cm": player_profile.height_cm,
         "weight_kg": player_profile.weight_kg,
         "phone": player_profile.user.phone,
-        "foot": player_profile.foot,
+        "foot": normalize_player_foot_status(player_profile.foot, default=None),
     }
 
 
@@ -63,7 +65,20 @@ class PlayerProfileUpdateSerializer(serializers.Serializer):
     weight_kg = serializers.FloatField(required=False, allow_null=True, min_value=0)
     date_of_birth = serializers.DateField(required=False, allow_null=True)
     phone = serializers.CharField(required=False, allow_null=True, allow_blank=True, max_length=32)
-    foot = serializers.ChoiceField(choices=PlayerProfile.FOOT_CHOICES, required=False, allow_null=True)
+    foot = serializers.CharField(required=False, allow_null=True)
+
+    def validate_foot(self, value):
+        if value is None:
+            return None
+
+        if value != normalize_player_foot_status(value):
+            raise serializers.ValidationError("Use uppercase values.")
+
+        parsed = parse_player_foot_api_value(value)
+        if parsed is None:
+            raise serializers.ValidationError("Invalid foot value.")
+
+        return parsed
 
     def validate(self, attrs):
         unknown_fields = sorted(set(self.initial_data.keys()) - set(self.fields.keys()))

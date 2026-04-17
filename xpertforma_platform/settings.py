@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 from pathlib import Path
 from datetime import timedelta
 import os
+import sys
 import dj_database_url
 from dotenv import load_dotenv
 
@@ -64,8 +65,7 @@ ROOT_URLCONF = 'xpertforma_platform.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR / 'templates']
-        ,
+        'DIRS': [BASE_DIR / 'templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -83,10 +83,15 @@ WSGI_APPLICATION = 'xpertforma_platform.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
-
-
-SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-key")
 DEBUG = os.getenv("DEBUG", "False") == "True"
+RUNNING_TESTS = "test" in sys.argv
+SECRET_KEY = os.getenv("SECRET_KEY")
+if not SECRET_KEY:
+    if DEBUG or RUNNING_TESTS:
+        SECRET_KEY = "dev-secret-key"
+    else:
+        raise RuntimeError("SECRET_KEY environment variable must be set outside local development.")
+
 RENDER_EXTERNAL_HOSTNAME = os.getenv("RENDER_EXTERNAL_HOSTNAME")
 EXTRA_ALLOWED_HOSTS = _split_env_list("ALLOWED_HOSTS_EXTRA")
 EXTRA_CSRF_TRUSTED_ORIGINS = _split_env_list("CSRF_TRUSTED_ORIGINS_EXTRA")

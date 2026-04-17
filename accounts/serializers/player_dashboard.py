@@ -1,5 +1,7 @@
 from rest_framework import serializers
 
+from xpertforma_platform.api_fields import UppercaseTokenField
+
 
 class PlayerDashboardSessionSerializer(serializers.Serializer):
     session_id = serializers.UUIDField()
@@ -9,7 +11,7 @@ class PlayerDashboardSessionSerializer(serializers.Serializer):
     start_time = serializers.TimeField(allow_null=True)
     end_time = serializers.TimeField(allow_null=True)
     duration_min = serializers.IntegerField()
-    status = serializers.CharField()
+    status = UppercaseTokenField()
 
 
 class MacroProgressSerializer(serializers.Serializer):

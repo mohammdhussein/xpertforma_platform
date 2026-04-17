@@ -20,4 +20,4 @@ def reject_coach_profile(coach_profile, *, reason=""):
     coach_profile.rejection_reason = reason
     coach_profile.save(update_fields=["approval_status", "approved_at", "approved_by", "rejection_reason"])
 
-    return {"coach_id": coach_profile.user_id, "status": "rejected", "reason": reason}
+    return {"coach_id": coach_profile.user_id, "status": COACH_APPROVAL_REJECTED, "reason": reason}

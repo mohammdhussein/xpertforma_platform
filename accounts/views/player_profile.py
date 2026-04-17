@@ -22,7 +22,7 @@ class PlayerProfileAPIView(APIView):
         return self._update(request, partial=True)
 
     def put(self, request):
-        return self._update(request, partial=True)
+        return self._update(request, partial=False)
 
     def _update(self, request, *, partial):
         player_profile = request.user.player_profile

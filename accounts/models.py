@@ -113,9 +113,9 @@ class PlayerProfile(models.Model):
     FOOT_LEFT = "left"
     FOOT_BOTH = "both"
     FOOT_CHOICES = [
-        (FOOT_RIGHT, "RIGHT"),
-        (FOOT_LEFT, "left"),
-        (FOOT_BOTH, "BOTH"),
+        (FOOT_RIGHT, "Right"),
+        (FOOT_LEFT, "Left"),
+        (FOOT_BOTH, "Both"),
     ]
 
     STATE_ACTIVE = "active"

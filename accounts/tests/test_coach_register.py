@@ -135,3 +135,35 @@ class CoachRegisterTests(TestCase):
             response.data["last_name"],
             ["Combined first_name and last_name must be 120 characters or fewer."],
         )
+
+    def test_register_coach_rejects_common_password(self):
+        response = self.client.post(
+            "/api/auth/register/coach/",
+            {
+                "first_name": "Coach",
+                "last_name": "Common",
+                "email": "commoncoach@example.com",
+                "password": "password123",
+                "certificate_image": "coach_certificates/certificate.png",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("password", response.data)
+
+    def test_register_coach_rejects_numeric_password(self):
+        response = self.client.post(
+            "/api/auth/register/coach/",
+            {
+                "first_name": "Coach",
+                "last_name": "Numeric",
+                "email": "numericcoach@example.com",
+                "password": "12345678",
+                "certificate_image": "coach_certificates/certificate.png",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("password", response.data)

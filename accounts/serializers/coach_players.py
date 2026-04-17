@@ -11,6 +11,7 @@ from accounts.statuses import (
     PLAYER_LOGIN_STATUS_COMPLETE,
     PLAYER_LOGIN_STATUS_FIRST_LOGIN,
 )
+from xpertforma_platform.api_fields import UppercaseTokenField
 
 
 class ConflictError(APIException):
@@ -96,7 +97,7 @@ class PlayerCardSerializer(serializers.Serializer):
     id = serializers.UUIDField()
     name = serializers.CharField()
     position = PositionSummarySerializer()
-    state = serializers.CharField()  # active / needs_review / injured
+    state = UppercaseTokenField()
     avatar_url = serializers.CharField(allow_null=True)
 
 
@@ -108,22 +109,23 @@ class CoachPlayerDetailPlayerSerializer(serializers.Serializer):
     id = serializers.UUIDField()
     name = serializers.CharField()
     dateOfBirth = serializers.DateField(allow_null=True)
-    position = serializers.CharField(allow_null=True)
+    position = PositionSummarySerializer()
+    avatar_url = serializers.CharField(allow_null=True)
     phone = serializers.CharField(allow_blank=True, allow_null=True)
     heightCm = serializers.FloatField(allow_null=True)
     weightKg = serializers.FloatField(allow_null=True)
-    foot = serializers.CharField(allow_null=True)
+    foot = UppercaseTokenField(allow_null=True)
 
 
 class CoachPlayerNeedsAttentionSerializer(serializers.Serializer):
     id = serializers.CharField()
     message = serializers.CharField()
-    severity = serializers.CharField()
+    severity = UppercaseTokenField()
 
 
 class CoachPlayerProgressRateSerializer(serializers.Serializer):
     value = serializers.IntegerField()
-    trend = serializers.CharField()
+    trend = UppercaseTokenField()
 
 
 class CoachPlayerAttendanceSerializer(serializers.Serializer):
@@ -138,7 +140,7 @@ class CoachPlayerConsistencySerializer(serializers.Serializer):
 
 class CoachPlayerFocusAreaSerializer(serializers.Serializer):
     name = serializers.CharField(allow_null=True)
-    trend = serializers.CharField()
+    trend = UppercaseTokenField()
 
 
 class CoachPlayerKeyMetricsSerializer(serializers.Serializer):
@@ -152,15 +154,16 @@ class CoachPlayerRecentActivitySerializer(serializers.Serializer):
     id = serializers.UUIDField()
     title = serializers.CharField()
     date = serializers.DateField()
-    timeRange = serializers.CharField()
+    startTime = serializers.CharField(allow_blank=True)
+    endTime = serializers.CharField(allow_blank=True)
     durationMinutes = serializers.IntegerField()
-    status = serializers.CharField()
+    status = UppercaseTokenField()
 
 
 class CoachPlayerOverviewSerializer(serializers.Serializer):
     needsAttention = CoachPlayerNeedsAttentionSerializer(many=True)
     keyMetrics = CoachPlayerKeyMetricsSerializer()
-    coachInsight = serializers.CharField()
+    coachInsights = serializers.ListField(child=serializers.CharField())
     recentActivity = CoachPlayerRecentActivitySerializer(many=True)
 
 
@@ -182,7 +185,7 @@ class CoachPlayerStatsSerializer(serializers.Serializer):
 class CoachPlayerPlanSerializer(serializers.Serializer):
     id = serializers.UUIDField()
     title = serializers.CharField()
-    status = serializers.CharField()
+    status = UppercaseTokenField()
     progress = serializers.IntegerField()
     completedSessions = serializers.IntegerField()
     remainingSessions = serializers.IntegerField()

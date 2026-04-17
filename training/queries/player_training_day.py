@@ -4,15 +4,12 @@ from django.utils.dateparse import parse_date
 from rest_framework.exceptions import ParseError
 
 from training.models import PlayerSessionProgress, TrainingPlanPlayer, TrainingSession
-from training.statuses import is_completed_player_session_status, normalize_player_session_status
-
-
-def _duration_min(start_time, end_time):
-    if not start_time or not end_time:
-        return 0
-    start_dt = datetime.combine(dt_date.today(), start_time)
-    end_dt = datetime.combine(dt_date.today(), end_time)
-    return max(int((end_dt - start_dt).total_seconds() // 60), 0)
+from training.statuses import (
+    is_completed_player_session_status,
+    normalize_player_session_status,
+    to_api_player_session_status,
+)
+from accounts.utils import duration_minutes
 
 
 def build_player_training_day_payload(player_user, *, date_str):
@@ -44,31 +41,36 @@ def build_player_training_day_payload(player_user, *, date_str):
 
     for session in sessions:
         plan_key = str(session.plan.plan_id)
-        plans_out.setdefault(plan_key, {"plan_id": plan_key, "title": session.plan.title, "sessions": []})
+        plans_out.setdefault(plan_key,
+                             {"plan_id": plan_key, "title": session.plan.title, "sessions": [], "_session_ids": []})
 
         status = progress_map.get(session.session_id, "not_started")
-        duration = _duration_min(session.start_time, session.end_time)
+        duration = duration_minutes(session.start_time, session.end_time)
         total_duration += duration
         total_sessions += 1
         if is_completed_player_session_status(status):
             completed_sessions += 1
 
+        plans_out[plan_key]["_session_ids"].append(session.session_id)
         plans_out[plan_key]["sessions"].append(
             {
                 "session_id": str(session.session_id),
                 "title": session.title or "Session",
                 "duration_min": duration,
-                "status": status,
+                "status": to_api_player_session_status(status),
             }
         )
 
     final_plans = []
-    for plan_payload in plans_out.values():
+    for plan_key, plan_payload in plans_out.items():
         sessions_list = plan_payload["sessions"]
         plan_payload["sessions_count"] = len(sessions_list)
-        plan_payload["completed"] = len(sessions_list) > 0 and all(
-            is_completed_player_session_status(session["status"]) for session in sessions_list
+        plan_session_ids = plan_payload.get("_session_ids", [])
+        plan_payload["completed"] = len(plan_session_ids) > 0 and all(
+            is_completed_player_session_status(progress_map.get(sid, "not_started"))
+            for sid in plan_session_ids
         )
+        plan_payload.pop("_session_ids", None)
         final_plans.append(plan_payload)
 
     final_plans.sort(key=lambda item: item["title"].lower())
@@ -87,4 +89,3 @@ def build_player_training_day_payload(player_user, *, date_str):
         },
         "plans": final_plans,
     }
-

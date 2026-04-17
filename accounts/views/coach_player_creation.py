@@ -2,8 +2,8 @@ from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
-from accounts.permissions import IsCoach
-from accounts.serializers.coach import CoachCreatePlayerSerializer
+from accounts.permissions import IsApprovedCoach
+from accounts.serializers.coach_players import CoachCreatePlayerSerializer
 from accounts.services.password_setup import (
     build_password_setup_deep_link,
     create_password_setup_token,
@@ -12,7 +12,7 @@ from accounts.services.password_setup import (
 
 
 class CoachCreatePlayerAPIView(APIView):
-    permission_classes = [IsAuthenticated, IsCoach]
+    permission_classes = [IsAuthenticated, IsApprovedCoach]
 
     def post(self, request):
         s = CoachCreatePlayerSerializer(data=request.data)

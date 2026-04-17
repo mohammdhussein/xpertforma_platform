@@ -77,6 +77,7 @@ class CoachTrainingPlanValidationTests(TestCase):
         self.assertIn("plans", response.data)
         self.assertEqual(len(response.data["plans"]), 1)
         self.assertEqual(response.data["plans"][0]["title"], "Season Plan")
+        self.assertEqual(response.data["plans"][0]["status"], "DRAFT")
         self.assertEqual(response.data["plans"][0]["total_sessions"], 1)
         self.assertEqual(response.data["plans"][0]["assigned_players_count"], 1)
 
@@ -118,6 +119,7 @@ class CoachTrainingPlanValidationTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data["title"], "Screen Plan")
+        self.assertEqual(response.data["status"], "DRAFT")
         self.assertEqual(response.data["assigned_players_count"], 1)
         self.assertIn("assigned_players", response.data)
         self.assertIn("training_sessions", response.data)
@@ -134,7 +136,30 @@ class CoachTrainingPlanValidationTests(TestCase):
         self.assertEqual(len(response.data["training_sessions"]), 2)
         self.assertEqual(response.data["training_sessions"][0]["day_label"], "Wednesday, Apr 1")
         self.assertEqual(len(response.data["training_sessions"][0]["sessions"]), 2)
+        self.assertEqual(response.data["training_sessions"][0]["sessions"][0]["session_type"], "GROUP")
         self.assertEqual(response.data["training_sessions"][0]["sessions"][0]["time_range"], "16:00 - 17:30")
+
+    def test_rejects_lowercase_session_type(self):
+        response = self.client.post(
+            "/api/coach/plans/",
+            {
+                "title": "Bad Session Type Plan",
+                "start_date": "2026-04-01",
+                "end_date": "2026-04-02",
+                "sessions": [
+                    {
+                        "date": "2026-04-01",
+                        "title": "Session A",
+                        "session_type": "group",
+                    }
+                ],
+                "assignee_players": [{"id": str(self.player.id)}],
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.data["session_type"], ["Use uppercase values."])
 
     def test_rejects_session_with_only_one_time(self):
         response = self.client.post(

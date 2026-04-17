@@ -6,9 +6,9 @@ from rest_framework.views import APIView
 
 from accounts.authentication import BlacklistableJWTAuthentication
 from accounts.models import CoachProfile
-from accounts.selectors.admin_coaches import get_pending_coach_profiles_queryset
-from accounts.serializers.admin import CoachApprovalActionSerializer, PendingCoachSerializer
-from accounts.services.admin_coaches import approve_coach_profile, reject_coach_profile
+from accounts.queries.admin_coach_approval import get_pending_coach_profiles_queryset
+from accounts.serializers.admin_coach_approval import CoachApprovalActionSerializer, PendingCoachSerializer
+from accounts.services.admin_coach_approval import approve_coach_profile, reject_coach_profile
 
 class PendingCoachesAPIView(APIView):
     authentication_classes = [SessionAuthentication, BlacklistableJWTAuthentication]
