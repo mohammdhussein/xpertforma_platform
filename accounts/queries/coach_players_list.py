@@ -5,14 +5,14 @@ from accounts.files import build_media_value_url
 from accounts.models import PlayerProfile
 from accounts.serializers.position import build_position_payload
 from accounts.statuses import (
-    PLAYER_STATE_API_TO_DB,
+    VALID_PLAYER_STATE_VALUES,
     normalize_player_state,
     parse_player_state_api_value,
 )
 from xpertforma_platform.api_values import normalize_api_value
 
 
-VALID_COACH_PLAYERS_TAB_VALUES = ["ALL", *PLAYER_STATE_API_TO_DB.keys()]
+VALID_COACH_PLAYERS_TAB_VALUES = ["ALL", *sorted(VALID_PLAYER_STATE_VALUES)]
 
 
 def get_coach_players_queryset(coach_user):

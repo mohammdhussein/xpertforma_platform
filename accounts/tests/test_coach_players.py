@@ -168,7 +168,7 @@ class CoachPlayersListTests(TestCase):
         speed_progress = PlayerSessionProgress.objects.create(
             player=self.player_one,
             session=speed_session,
-            status="COMPLETE",
+            status="COMPLETED",
         )
         shooting_progress = PlayerSessionProgress.objects.create(
             player=self.player_one,
@@ -183,7 +183,7 @@ class CoachPlayersListTests(TestCase):
         completed_plan_progress = PlayerSessionProgress.objects.create(
             player=self.player_one,
             session=completed_plan_session,
-            status="COMPLETE",
+            status="COMPLETED",
         )
 
         PlayerSessionProgress.objects.filter(pk=speed_progress.pk).update(updated_at=now - timedelta(days=3))
