@@ -20,7 +20,7 @@ class PlayerProfileEndpointTests(TestCase):
         UserRole.objects.create(user=self.player, role=self.player_role)
         PlayerProfile.objects.create(
             user=self.player,
-            login_status="first_login",
+            login_status="FIRST_LOGIN",
         )
 
     def test_get_returns_current_player_profile(self):

@@ -67,7 +67,7 @@ class CoachSessionLifecycleTests(TestCase):
             title="Lifecycle Plan",
             start_date="2026-04-01",
             end_date="2026-04-05",
-            status="active",
+            status="ACTIVE",
         )
         TrainingPlanPlayer.objects.create(plan=self.plan, player=self.player_a, assigned_by=self.coach)
         TrainingPlanPlayer.objects.create(plan=self.plan, player=self.player_b, assigned_by=self.coach)
@@ -111,7 +111,7 @@ class CoachSessionLifecycleTests(TestCase):
         self.assertEqual(lifecycle.started_by, self.coach)
         self.assertTrue(
             SessionAttendance.objects
-            .filter(session=self.session, player=self.player_a, status="present")
+            .filter(session=self.session, player=self.player_a, status="PRESENT")
             .exists()
         )
 
@@ -154,7 +154,7 @@ class CoachSessionLifecycleTests(TestCase):
             title="Other Plan",
             start_date="2026-04-01",
             end_date="2026-04-05",
-            status="active",
+            status="ACTIVE",
         )
         self.client.force_authenticate(user=self.coach)
         response = self.client.post(

@@ -18,7 +18,7 @@ class LoginEndpointTests(TestCase):
             name="Pending Coach",
         )
         UserRole.objects.create(user=coach, role=self.coach_role)
-        CoachProfile.objects.create(user=coach, approval_status="pending")
+        CoachProfile.objects.create(user=coach, approval_status="PENDING")
 
         response = self.client.post(
             "/api/auth/login/",
@@ -39,7 +39,7 @@ class LoginEndpointTests(TestCase):
         PlayerProfile.objects.create(
             user=player,
             position=self.striker,
-            login_status="complete",
+            login_status="COMPLETE",
         )
 
         response = self.client.post(
@@ -67,7 +67,7 @@ class LoginEndpointTests(TestCase):
         PlayerProfile.objects.create(
             user=player,
             position=self.striker,
-            login_status="complete",
+            login_status="COMPLETE",
         )
 
         login_response = self.client.post(

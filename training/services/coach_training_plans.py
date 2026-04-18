@@ -115,7 +115,7 @@ def create_coach_training_plan(*, coach_user, payload):
         payload.get("assignee_players") or [],
     )
 
-    plan = plan_serializer.save(creator=coach_user, status="draft")
+    plan = plan_serializer.save(creator=coach_user, status="DRAFT")
     created_sessions = [
         TrainingSession.objects.create(plan=plan, **session_payload)
         for session_payload in normalized_sessions

@@ -19,7 +19,7 @@ class UserInfoTests(TestCase):
         PlayerProfile.objects.create(
             user=self.player,
             position=self.striker,
-            login_status="complete",
+            login_status="COMPLETE",
         )
 
     def test_authenticated_request_updates_last_seen(self):

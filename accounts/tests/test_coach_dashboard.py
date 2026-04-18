@@ -48,7 +48,7 @@ class CoachDashboardTests(TestCase):
             title="Dashboard Plan",
             start_date=today,
             end_date=today + timedelta(days=10),
-            status="draft",
+            status="DRAFT",
         )
         TrainingPlanPlayer.objects.create(plan=plan, player=self.player, assigned_by=self.coach)
 
@@ -95,7 +95,7 @@ class CoachDashboardTests(TestCase):
             title="Weekly Count Plan",
             start_date=mocked_today - timedelta(days=3),
             end_date=mocked_today + timedelta(days=7),
-            status="draft",
+            status="DRAFT",
         )
         TrainingPlanPlayer.objects.create(plan=plan, player=self.player, assigned_by=self.coach)
 
@@ -141,7 +141,7 @@ class CoachDashboardTests(TestCase):
             title="Upcoming Filter Plan",
             start_date=mocked_today,
             end_date=mocked_today + timedelta(days=7),
-            status="draft",
+            status="DRAFT",
         )
         TrainingPlanPlayer.objects.create(plan=plan, player=self.player, assigned_by=self.coach)
 

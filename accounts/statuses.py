@@ -8,14 +8,14 @@ COACH_APPROVAL_REJECTED = "REJECTED"
 PLAYER_LOGIN_STATUS_FIRST_LOGIN = "FIRST_LOGIN"
 PLAYER_LOGIN_STATUS_COMPLETE = "COMPLETE"
 PLAYER_FOOT_API_TO_DB = {
-    "RIGHT": "right",
-    "LEFT": "left",
-    "BOTH": "both",
+    "RIGHT": "RIGHT",
+    "LEFT":  "LEFT",
+    "BOTH":  "BOTH",
 }
 PLAYER_STATE_API_TO_DB = {
-    "ACTIVE": "active",
-    "INJURED": "injured",
-    "NEEDS_REVIEW": "needs_review",
+    "ACTIVE":       "ACTIVE",
+    "INJURED":      "INJURED",
+    "NEEDS_REVIEW": "NEEDS_REVIEW",
 }
 
 

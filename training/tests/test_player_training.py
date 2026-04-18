@@ -26,7 +26,7 @@ def make_player(email="rangeplayer@example.com"):
     )
     UserRole.objects.create(user=user, role=player_role)
     striker = Position.objects.get(code="ST")
-    PlayerProfile.objects.create(user=user, position=striker, login_status="complete")
+    PlayerProfile.objects.create(user=user, position=striker, login_status="COMPLETE")
     return user
 
 
@@ -39,7 +39,7 @@ class PlayerTrainingRangeTests(TestCase):
             title="Speed Plan",
             start_date="2026-04-01",
             end_date="2026-04-07",
-            status="draft",
+            status="DRAFT",
         )
         TrainingPlanPlayer.objects.create(plan=self.plan, player=self.player, assigned_by=self.player)
 
@@ -171,7 +171,7 @@ class PlayerTrainingRangeTests(TestCase):
             title="Other Plan",
             start_date="2026-04-01",
             end_date="2026-04-02",
-            status="draft",
+            status="DRAFT",
         )
         TrainingPlanPlayer.objects.create(plan=other_plan, player=other, assigned_by=other)
         TrainingSession.objects.create(

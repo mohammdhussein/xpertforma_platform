@@ -43,7 +43,7 @@ def build_recent_activity(sessions, progress_map, *, limit=3):
     for session in sessions:
         if len(recent_activity) >= limit:
             break
-        status = progress_map.get(session.session_id, "not_started")
+        status = progress_map.get(session.session_id, "NOT_STARTED")
         recent_activity.append(
             {
                 "id": session.session_id,

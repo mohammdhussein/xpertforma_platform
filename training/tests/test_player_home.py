@@ -21,7 +21,7 @@ def make_player(email="homeplayer@example.com"):
     user = User.objects.create_user(email=email, password="StrongPass123!", name="Home Player")
     UserRole.objects.create(user=user, role=role)
     position = Position.objects.get(code="ST")
-    PlayerProfile.objects.create(user=user, position=position, login_status="complete")
+    PlayerProfile.objects.create(user=user, position=position, login_status="COMPLETE")
     return user
 
 
@@ -31,7 +31,7 @@ def make_plan_with_session(player, session_date, start_time=None, **session_kwar
         title="Test Plan",
         start_date=session_date,
         end_date=session_date + timedelta(days=7),
-        status="published",
+        status="PUBLISHED",
     )
     TrainingPlanPlayer.objects.create(plan=plan, player=player, assigned_by=player)
     session = TrainingSession.objects.create(
@@ -186,4 +186,4 @@ class PlayerHomeEndpointTests(TestCase):
         response = self.client.get(HOME_URL)
         insights = response.data["ai_insights"]
         self.assertEqual(len(insights), 1)
-        self.assertEqual(insights[0]["tag"], "load")
+        self.assertEqual(insights[0]["tag"], "LOAD")

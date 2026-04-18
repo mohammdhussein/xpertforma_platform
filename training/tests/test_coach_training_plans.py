@@ -61,7 +61,7 @@ class CoachTrainingPlanValidationTests(TestCase):
             title="Season Plan",
             start_date="2026-04-01",
             end_date="2026-04-05",
-            status="draft",
+            status="DRAFT",
         )
         TrainingSession.objects.create(
             plan=plan,
@@ -87,7 +87,7 @@ class CoachTrainingPlanValidationTests(TestCase):
             title="Screen Plan",
             start_date="2026-04-01",
             end_date="2026-04-05",
-            status="draft",
+            status="DRAFT",
         )
         TrainingPlanPlayer.objects.create(plan=plan, player=self.player, assigned_by=self.coach)
         TrainingSession.objects.create(

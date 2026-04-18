@@ -6,10 +6,10 @@ from xpertforma_platform.api_values import normalize_api_value
 # ── Checkin ──────────────────────────────────────────────────────────────────
 
 class SleepQuality(models.TextChoices):
-    POOR  = "poor",  "Poor"
-    FAIR  = "fair",  "Fair"
-    GOOD  = "good",  "Good"
-    GREAT = "great", "Great"
+    POOR  = "POOR",  "Poor"
+    FAIR  = "FAIR",  "Fair"
+    GOOD  = "GOOD",  "Good"
+    GREAT = "GREAT", "Great"
 
 
 SLEEP_QUALITY_SCORE = {
@@ -29,44 +29,44 @@ VALID_SORE_ZONES = [
 # ── Training session ─────────────────────────────────────────────────────────
 
 class Intensity(models.TextChoices):
-    LOW    = "low",    "Low"
-    MEDIUM = "medium", "Medium"
-    HIGH   = "high",   "High"
+    LOW    = "LOW",    "Low"
+    MEDIUM = "MEDIUM", "Medium"
+    HIGH   = "HIGH",   "High"
 
 
 # ── AI insights ──────────────────────────────────────────────────────────────
 
 class InsightTag(models.TextChoices):
-    LOAD      = "load",      "Load"
-    INTENSITY = "intensity", "Intensity"
-    RECOVERY  = "recovery",  "Recovery"
+    LOAD      = "LOAD",      "Load"
+    INTENSITY = "INTENSITY", "Intensity"
+    RECOVERY  = "RECOVERY",  "Recovery"
 
 
 # ── Player session status ─────────────────────────────────────────────────────
 
-CANONICAL_COMPLETED_PLAYER_SESSION_STATUS = "completed"
-COMPLETED_PLAYER_SESSION_STATUSES = {"complete", CANONICAL_COMPLETED_PLAYER_SESSION_STATUS}
+CANONICAL_COMPLETED_PLAYER_SESSION_STATUS = "COMPLETED"
+COMPLETED_PLAYER_SESSION_STATUSES = {"COMPLETE", CANONICAL_COMPLETED_PLAYER_SESSION_STATUS}
 VALID_PLAYER_SESSION_STATUSES = {
-    "not_started",
-    "in_progress",
+    "NOT_STARTED",
+    "IN_PROGRESS",
     *COMPLETED_PLAYER_SESSION_STATUSES,
 }
 PLAYER_SESSION_STATUS_API_TO_DB = {
-    "NOT_STARTED": "not_started",
-    "IN_PROGRESS": "in_progress",
+    "NOT_STARTED": "NOT_STARTED",
+    "IN_PROGRESS": "IN_PROGRESS",
     "COMPLETED":   CANONICAL_COMPLETED_PLAYER_SESSION_STATUS,
 }
 TRAINING_SESSION_TYPE_API_TO_DB = {
-    "GROUP":      "group",
-    "TEAM":       "team",
-    "INDIVIDUAL": "individual",
+    "GROUP":      "GROUP",
+    "TEAM":       "TEAM",
+    "INDIVIDUAL": "INDIVIDUAL",
 }
 
 
-def normalize_player_session_status(value, *, default="not_started"):
+def normalize_player_session_status(value, *, default="NOT_STARTED"):
     if not value:
         return default
-    status = str(value).strip()
+    status = normalize_api_value(value, default=default)
     if status in COMPLETED_PLAYER_SESSION_STATUSES:
         return CANONICAL_COMPLETED_PLAYER_SESSION_STATUS
     return status
@@ -88,9 +88,9 @@ def parse_player_session_status_api_value(value):
 
 
 def derive_session_player_status_api_value(lifecycle_status, *, has_attendance):
-    if lifecycle_status == "completed":
+    if lifecycle_status == "COMPLETED":
         return "COMPLETED" if has_attendance else "MISSED"
-    if lifecycle_status == "in_progress":
+    if lifecycle_status == "IN_PROGRESS":
         return "IN_PROGRESS"
     return "NOT_STARTED"
 
