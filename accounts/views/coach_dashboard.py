@@ -15,7 +15,6 @@ from accounts.models import PlayerProfile
 from accounts.serializers.position import build_position_payload
 from training.models import TrainingPlanPlayer, TrainingSession
 from training.statuses import to_api_training_session_type
-from accounts.utils import duration_minutes
 from accounts.serializers.coach_dashboard import CoachDashboardSerializer
 
 UPCOMING_SESSIONS_LIMIT = 3
@@ -119,7 +118,6 @@ class CoachDashboardAPIView(APIView):
                 "start_time": s.start_time,
                 "session_type": to_api_training_session_type(s.session_type),
                 "players_count": players_count_map.get(s.plan_id, 0),
-                "duration_min": duration_minutes(s.start_time, s.end_time),
             })
 
         payload = {

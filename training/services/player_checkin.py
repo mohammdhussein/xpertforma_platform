@@ -1,7 +1,13 @@
 from datetime import date
 
-from accounts.exceptions import ConflictError
-from training.queries.player_checkin import create_checkin, get_today_checkin
+from django.db import transaction
+
+from accounts.exceptions import ConflictError, NotFoundError
+from training.queries.player_checkin import (
+    create_checkin,
+    get_today_checkin,
+    update_checkin,
+)
 from training.statuses import SLEEP_QUALITY_SCORE
 
 
@@ -22,6 +28,22 @@ def submit_checkin(player_user, *, sleep_hours, sleep_quality, mood, sore_zones)
     return create_checkin(
         player_user,
         checkin_date=date.today(),
+        sleep_hours=sleep_hours,
+        sleep_quality=sleep_quality,
+        mood=mood,
+        sore_zones=sore_zones,
+        readiness_score=score,
+    )
+
+
+@transaction.atomic
+def update_today_checkin(player_user, *, sleep_hours, sleep_quality, mood, sore_zones):
+    checkin = get_today_checkin(player_user, for_update=True)
+    if checkin is None:
+        raise NotFoundError("No check-in submitted for today.")
+    score = compute_readiness_score(sleep_hours, sleep_quality, mood, sore_zones)
+    return update_checkin(
+        checkin,
         sleep_hours=sleep_hours,
         sleep_quality=sleep_quality,
         mood=mood,

@@ -150,7 +150,6 @@ class CoachPlayerRecentActivitySerializer(serializers.Serializer):
     date = serializers.DateField()
     startTime = serializers.CharField(allow_blank=True)
     endTime = serializers.CharField(allow_blank=True)
-    durationMinutes = serializers.IntegerField()
     status = UppercaseTokenField()
 
 

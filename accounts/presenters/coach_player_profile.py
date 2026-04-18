@@ -3,7 +3,6 @@ from django.utils import timezone
 from accounts.files import build_media_value_url
 from accounts.serializers.position import build_position_payload
 from accounts.statuses import normalize_player_foot_status
-from accounts.utils import duration_minutes
 from training.statuses import is_completed_player_session_status
 
 
@@ -52,7 +51,6 @@ def build_recent_activity(sessions, progress_map, *, limit=3):
                 "date": session.session_date,
                 "startTime": _format_time_value(session.start_time),
                 "endTime": _format_time_value(session.end_time),
-                "durationMinutes": duration_minutes(session.start_time, session.end_time),
                 "status": "COMPLETED" if is_completed_player_session_status(status) else "MISSED",
             }
         )

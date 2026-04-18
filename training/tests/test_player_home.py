@@ -143,18 +143,13 @@ class PlayerHomeEndpointTests(TestCase):
         self.assertEqual(sessions[0]["title"], "First")
         self.assertEqual(sessions[1]["title"], "Later")
 
-    def test_is_today_true_for_todays_session(self):
+    def test_upcoming_sessions_do_not_include_is_today(self):
         make_plan_with_session(self.player, self.today, start_time="10:00", title="Today's session")
-        response = self.client.get(HOME_URL)
-        today_sessions = [s for s in response.data["upcoming_sessions"] if s["title"] == "Today's session"]
-        self.assertTrue(today_sessions[0]["is_today"])
-
-    def test_is_today_false_for_future_session(self):
         future = self.today + timedelta(days=3)
         make_plan_with_session(self.player, future, start_time="10:00", title="Future session")
         response = self.client.get(HOME_URL)
-        future_sessions = [s for s in response.data["upcoming_sessions"] if s["title"] == "Future session"]
-        self.assertFalse(future_sessions[0]["is_today"])
+        for session in response.data["upcoming_sessions"]:
+            self.assertNotIn("is_today", session)
 
     def test_weekly_progress_delta_computed_correctly(self):
         week_start      = self.today - timedelta(days=self.today.weekday())

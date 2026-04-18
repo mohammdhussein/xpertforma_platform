@@ -9,7 +9,11 @@ from training.serializers.player_checkin import (
     SubmitCheckinSerializer,
     TodayStatusSerializer,
 )
-from training.services.player_checkin import get_today_status, submit_checkin
+from training.services.player_checkin import (
+    get_today_status,
+    submit_checkin,
+    update_today_checkin,
+)
 
 
 class TodayCheckinStatusAPIView(APIView):
@@ -28,3 +32,9 @@ class SubmitCheckinAPIView(APIView):
         serializer.is_valid(raise_exception=True)
         checkin = submit_checkin(request.user, **serializer.validated_data)
         return Response(CheckinDetailSerializer(checkin).data, status=HTTP_201_CREATED)
+
+    def put(self, request):
+        serializer = SubmitCheckinSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        checkin = update_today_checkin(request.user, **serializer.validated_data)
+        return Response(CheckinDetailSerializer(checkin).data)

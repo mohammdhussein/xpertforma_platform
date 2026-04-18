@@ -26,7 +26,6 @@ class CoachUpcomingSessionSerializer(serializers.Serializer):
     start_time = serializers.TimeField(allow_null=True)
     session_type = UppercaseTokenField()
     players_count = serializers.IntegerField()
-    duration_min = serializers.IntegerField()
 
 
 class CoachDashboardSerializer(serializers.Serializer):
