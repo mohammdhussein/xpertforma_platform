@@ -87,6 +87,14 @@ def parse_player_session_status_api_value(value):
     return PLAYER_SESSION_STATUS_API_TO_DB.get(normalize_api_value(value))
 
 
+def derive_session_player_status_api_value(lifecycle_status, *, has_attendance):
+    if lifecycle_status == "completed":
+        return "COMPLETED" if has_attendance else "MISSED"
+    if lifecycle_status == "in_progress":
+        return "IN_PROGRESS"
+    return "NOT_STARTED"
+
+
 def to_api_training_session_type(value, *, default=""):
     return normalize_api_value(value, default=default)
 

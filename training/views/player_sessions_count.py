@@ -3,16 +3,16 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from accounts.permissions import IsPlayer
-from training.queries.player_training_day import build_player_training_day_payload
+from training.queries.player_sessions_count import build_player_sessions_count_payload
 
 
-class PlayerTrainingDayAPIView(APIView):
+class PlayerSessionsCountAPIView(APIView):
     permission_classes = [IsAuthenticated, IsPlayer]
 
     def get(self, request):
-        payload = build_player_training_day_payload(
+        payload = build_player_sessions_count_payload(
             request.user,
-            date_str=request.query_params.get("date"),
+            start_date_str=request.query_params.get("start_date"),
+            end_date_str=request.query_params.get("end_date"),
         )
         return Response(payload)
-

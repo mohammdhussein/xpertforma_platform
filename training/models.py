@@ -71,7 +71,6 @@ class TrainingSession(models.Model):
     start_time = models.TimeField(null=True, blank=True)
     end_time = models.TimeField(null=True, blank=True)
     notes            = models.TextField(blank=True)
-    duration_minutes = models.PositiveIntegerField(null=True, blank=True)
     intensity        = models.CharField(
         max_length=10,
         choices=Intensity.choices,
@@ -117,6 +116,71 @@ class PlayerSessionProgress(models.Model):
 
     class Meta:
         unique_together = ("player", "session")
+
+
+class SessionLifecycle(models.Model):
+    NOT_STARTED = "not_started"
+    IN_PROGRESS = "in_progress"
+    COMPLETED   = "completed"
+    STATUS_CHOICES = [
+        (NOT_STARTED, "Not Started"),
+        (IN_PROGRESS, "In Progress"),
+        (COMPLETED,   "Completed"),
+    ]
+
+    session = models.OneToOneField(
+        "training.TrainingSession",
+        on_delete=models.CASCADE,
+        primary_key=True,
+        related_name="lifecycle",
+    )
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=NOT_STARTED)
+    started_at = models.DateTimeField(null=True, blank=True)
+    started_by = models.ForeignKey(
+        "accounts.User",
+        null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name="sessions_started",
+    )
+    ended_at = models.DateTimeField(null=True, blank=True)
+    ended_by = models.ForeignKey(
+        "accounts.User",
+        null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name="sessions_ended",
+    )
+
+
+class SessionAttendance(models.Model):
+    PRESENT = "present"
+    LATE    = "late"
+    STATUS_CHOICES = [
+        (PRESENT, "Present"),
+        (LATE,    "Late"),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    session = models.ForeignKey(
+        "training.TrainingSession",
+        on_delete=models.CASCADE,
+        related_name="attendance",
+    )
+    player = models.ForeignKey(
+        "accounts.User",
+        on_delete=models.CASCADE,
+        related_name="attendance_records",
+    )
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default=PRESENT)
+    marked_by = models.ForeignKey(
+        "accounts.User",
+        null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name="attendance_marked",
+    )
+    marked_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ("session", "player")
 
 
 class PlayerCheckin(models.Model):

@@ -98,7 +98,11 @@ class CoachPlayersListTests(TestCase):
         response = self.client.get("/api/coach/players/?tab=needs_review")
 
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.data, {"detail": "Invalid tab. Use uppercase values."})
+        self.assertEqual(response.data["detail"], "Invalid tab. Use uppercase values.")
+        self.assertEqual(
+            list(response.data["expected"]),
+            ["ALL", "ACTIVE", "INJURED", "NEEDS_REVIEW"],
+        )
 
     def test_player_profile_endpoint_returns_computed_overview_payload(self):
         today = timezone.localdate()
@@ -258,7 +262,6 @@ class CoachPlayersListTests(TestCase):
                     "date": str(today - timedelta(days=1)),
                     "startTime": "16:30",
                     "endTime": "18:00",
-                    "durationMinutes": 90,
                     "status": "MISSED",
                 },
                 {
@@ -267,7 +270,6 @@ class CoachPlayersListTests(TestCase):
                     "date": str(today - timedelta(days=2)),
                     "startTime": "18:00",
                     "endTime": "19:00",
-                    "durationMinutes": 60,
                     "status": "COMPLETED",
                 },
                 {
@@ -276,7 +278,6 @@ class CoachPlayersListTests(TestCase):
                     "date": str(today - timedelta(days=3)),
                     "startTime": "16:00",
                     "endTime": "17:30",
-                    "durationMinutes": 90,
                     "status": "COMPLETED",
                 },
             ],

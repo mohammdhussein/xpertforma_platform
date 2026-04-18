@@ -24,9 +24,8 @@
             margin: 0;
             font-family: Georgia, "Times New Roman", serif;
             color: var(--ink);
-            background:
-                radial-gradient(circle at top left, #efe7d6 0, transparent 28%),
-                linear-gradient(180deg, #f7f4ee 0%, #f2ede5 100%);
+            background: radial-gradient(circle at top left, #efe7d6 0, transparent 28%),
+            linear-gradient(180deg, #f7f4ee 0%, #f2ede5 100%);
         }
 
         .page {
@@ -154,11 +153,25 @@
             margin-right: 10px;
         }
 
-        .get { background: #2563eb; }
-        .post { background: #0f766e; }
-        .put { background: #b45309; }
-        .patch { background: #7c3aed; }
-        .delete { background: #b91c1c; }
+        .get {
+            background: #2563eb;
+        }
+
+        .post {
+            background: #0f766e;
+        }
+
+        .put {
+            background: #b45309;
+        }
+
+        .patch {
+            background: #7c3aed;
+        }
+
+        .delete {
+            background: #b91c1c;
+        }
 
         .path {
             font-family: Consolas, Monaco, monospace;
@@ -232,13 +245,15 @@
             <label for="api-search">Search APIs</label>
             <input id="api-search" type="search" placeholder="Search by path, method, params, or response field">
         </div>
-        <p class="search-note">Examples: <code>coach/plans</code>, <code>set-password</code>, <code>assigned_players</code>, <code>POST</code></p>
+        <p class="search-note">Examples: <code>coach/plans</code>, <code>set-password</code>,
+            <code>assigned_players</code>, <code>POST</code></p>
     </section>
 
     <section class="section api-section" id="auth">
         <h2>Auth</h2>
 
-        <div class="endpoint" data-search="POST /api/auth/register/coach coach register first_name last_name phone_number certificate_image approval_status pending">
+        <div class="endpoint"
+             data-search="POST /api/auth/register/coach coach register first_name last_name phone_number certificate_image approval_status pending">
             <div><span class="badge post">POST</span><span class="path">/api/auth/register/coach/</span></div>
             <p class="meta">Public. Register a coach account. New coach accounts start in pending approval status.</p>
             <div class="grid">
@@ -277,7 +292,9 @@
                 <div class="card">
                     <h4>Expected Values</h4>
                     <ul>
-                        <li><code>first_name</code>, <code>last_name</code>, <code>phone_number</code>, <code>email</code>, <code>password</code>: required strings.</li>
+                        <li><code>first_name</code>, <code>last_name</code>, <code>phone_number</code>,
+                            <code>email</code>, <code>password</code>: required strings.
+                        </li>
                         <li><code>certificate_image</code>: required uploaded image/file.</li>
                         <li><code>approval_status</code>: always <code>PENDING</code> after success.</li>
                     </ul>
@@ -287,7 +304,8 @@
 
         <div class="endpoint" data-search="POST /api/auth/login login access refresh jwt coach_status player_status">
             <div><span class="badge post">POST</span><span class="path">/api/auth/login/</span></div>
-            <p class="meta">Public. JWT login. Blocks coach accounts that are pending or rejected. Player logins return <code>FIRST_LOGIN</code> or <code>COMPLETE</code> in <code>player_status.login_status</code>.</p>
+            <p class="meta">Public. JWT login. Blocks coach accounts that are pending or rejected. Player logins return
+                <code>FIRST_LOGIN</code> or <code>COMPLETE</code> in <code>player_status.login_status</code>.</p>
             <div class="grid">
                 <div class="card">
                     <h4>Path Params</h4>
@@ -327,8 +345,11 @@
                     <h4>Expected Values</h4>
                     <ul>
                         <li><code>email</code>, <code>password</code>: required strings.</li>
-                        <li><code>coach_status.register_status</code>: <code>PENDING</code>, <code>APPROVED</code>, or <code>REJECTED</code>.</li>
-                        <li><code>player_status.login_status</code>: <code>FIRST_LOGIN</code> or <code>COMPLETE</code>.</li>
+                        <li><code>coach_status.register_status</code>: <code>PENDING</code>, <code>APPROVED</code>, or
+                            <code>REJECTED</code>.
+                        </li>
+                        <li><code>player_status.login_status</code>: <code>FIRST_LOGIN</code> or <code>COMPLETE</code>.
+                        </li>
                     </ul>
                 </div>
             </div>
@@ -364,7 +385,8 @@
 
         <div class="endpoint" data-search="POST /api/auth/logout logout blacklist access token refresh token revoke">
             <div><span class="badge post">POST</span><span class="path">/api/auth/logout/</span></div>
-            <p class="meta">Authenticated. Blacklists the current access token JTI in cache and revokes the provided refresh token.</p>
+            <p class="meta">Authenticated. Blacklists the current access token JTI in cache and revokes the provided
+                refresh token.</p>
             <div class="grid">
                 <div class="card">
                     <h4>Headers</h4>
@@ -384,16 +406,19 @@
                     <h4>Expected Values</h4>
                     <ul>
                         <li><code>Authorization</code>: required <code>Bearer &lt;access_token&gt;</code> header.</li>
-                        <li><code>refresh</code>: required refresh JWT string. After logout it cannot be used at <code>/api/auth/refresh/</code>.</li>
+                        <li><code>refresh</code>: required refresh JWT string. After logout it cannot be used at <code>/api/auth/refresh/</code>.
+                        </li>
                         <li>Response <code>205</code>: no body.</li>
                     </ul>
                 </div>
             </div>
         </div>
 
-        <div class="endpoint" data-search="POST /api/auth/complete-set-password complete set password token onboarding invite mobile deep link">
+        <div class="endpoint"
+             data-search="POST /api/auth/complete-set-password complete set password token onboarding invite mobile deep link">
             <div><span class="badge post">POST</span><span class="path">/api/auth/complete-set-password/</span></div>
-            <p class="meta">Public. Sets the invited player password using a one-time password setup token from the mobile deep link.</p>
+            <p class="meta">Public. Sets the invited player password using a one-time password setup token from the
+                mobile deep link.</p>
             <div class="grid">
                 <div class="card">
                     <h4>Request Body</h4>
@@ -461,12 +486,15 @@
         </div>
 
         <div class="endpoint" data-search="POST /api/admin/coaches/approve approve coach_id APPROVED">
-            <div><span class="badge post">POST</span><span class="path">/api/admin/coaches/&lt;coach_id&gt;/approve/</span></div>
+            <div><span class="badge post">POST</span><span
+                    class="path">/api/admin/coaches/&lt;coach_id&gt;/approve/</span></div>
             <p class="meta">Authenticated admin only. Approves a coach account.</p>
             <div class="grid">
                 <div class="card">
                     <h4>Path Params</h4>
-                    <ul><li><code>coach_id</code>: coach user UUID</li></ul>
+                    <ul>
+                        <li><code>coach_id</code>: coach user UUID</li>
+                    </ul>
                 </div>
                 <div class="card">
                     <h4>Request Body</h4>
@@ -490,12 +518,15 @@
         </div>
 
         <div class="endpoint" data-search="POST /api/admin/coaches/reject reject coach_id reason REJECTED">
-            <div><span class="badge post">POST</span><span class="path">/api/admin/coaches/&lt;coach_id&gt;/reject/</span></div>
+            <div><span class="badge post">POST</span><span
+                    class="path">/api/admin/coaches/&lt;coach_id&gt;/reject/</span></div>
             <p class="meta">Authenticated admin only. Rejects a coach account.</p>
             <div class="grid">
                 <div class="card">
                     <h4>Path Params</h4>
-                    <ul><li><code>coach_id</code>: coach user UUID</li></ul>
+                    <ul>
+                        <li><code>coach_id</code>: coach user UUID</li>
+                    </ul>
                 </div>
                 <div class="card">
                     <h4>Request Body</h4>
@@ -526,9 +557,12 @@
     <section class="section api-section" id="coach">
         <h2>Coach</h2>
 
-        <div class="endpoint" data-search="POST /api/coach/create-player coach create player position_id invite onboarding deep_link invitation_sent conflict 409 password setup">
+        <div class="endpoint"
+             data-search="POST /api/coach/create-player coach create player position_id invite onboarding deep_link invitation_sent conflict 409 password setup">
             <div><span class="badge post">POST</span><span class="path">/api/coach/create-player/</span></div>
-            <p class="meta">Authenticated coach only. Creates a player shell with name, email, and position, reassigns an existing player, and sends a password setup email with a one-time deep link when password setup is required. The rest of the profile is completed later from the player profile endpoint.</p>
+            <p class="meta">Authenticated coach only. Creates a player shell with name, email, and position, reassigns
+                an existing player, and sends a password setup email with a one-time deep link when password setup is
+                required. The rest of the profile is completed later from the player profile endpoint.</p>
             <div class="grid">
                 <div class="card">
                     <h4>Request Body</h4>
@@ -564,7 +598,9 @@
                         <li><code>409</code> if the same coach already has that player email</li>
                         <li><code>400</code> if the email belongs to a coach or manager account</li>
                         <li><code>400</code> if <code>position_id</code> is missing or invalid</li>
-                        <li><code>setup_password</code> is <code>null</code> when the player already has a usable password</li>
+                        <li><code>setup_password</code> is <code>null</code> when the player already has a usable
+                            password
+                        </li>
                     </ul>
                 </div>
                 <div class="card">
@@ -572,16 +608,24 @@
                     <ul>
                         <li><code>name</code>, <code>email</code>: required strings.</li>
                         <li><code>position_id</code>: required integer from <code>/api/positions/</code>.</li>
-                        <li><code>position</code>: object with <code>id</code>, <code>name</code>, <code>code</code>.</li>
-                        <li><code>created</code>, <code>password_setup_required</code>, <code>invitation_sent</code>: booleans.</li>
+                        <li><code>position</code>: object with <code>id</code>, <code>name</code>, <code>code</code>.
+                        </li>
+                        <li><code>created</code>, <code>password_setup_required</code>, <code>invitation_sent</code>:
+                            booleans.
+                        </li>
                     </ul>
                 </div>
             </div>
         </div>
 
-        <div class="endpoint" data-search="GET /api/coach/dashboard coach dashboard my_players position upcoming_sessions total_players sessions_this_week">
+        <div class="endpoint"
+             data-search="GET /api/coach/dashboard coach dashboard my_players position upcoming_sessions total_players sessions_this_week">
             <div><span class="badge get">GET</span><span class="path">/api/coach/dashboard/</span></div>
-            <p class="meta">Authenticated approved coach only. Dashboard summary with top 3 upcoming sessions. For sessions on the current day, only sessions with a start time later than the dashboard local time are included. The dashboard local time zone is controlled by <code>APP_LOCAL_TIME_ZONE</code> and defaults to <code>Asia/Jerusalem</code>. <code>sessions_this_week</code> is counted in a Sunday-to-Saturday window based on that same local date.</p>
+            <p class="meta">Authenticated approved coach only. Dashboard summary with top 3 upcoming sessions. For
+                sessions on the current day, only sessions with a start time later than the dashboard local time are
+                included. The dashboard local time zone is controlled by <code>APP_LOCAL_TIME_ZONE</code> and defaults
+                to <code>Asia/Jerusalem</code>. <code>sessions_this_week</code> is counted in a Sunday-to-Saturday
+                window based on that same local date.</p>
             <div class="grid">
                 <div class="card">
                     <h4>Response 200</h4>
@@ -612,8 +656,7 @@
       "session_date": "2026-04-03",
       "start_time": "16:00:00",
       "session_type": "TEAM",
-      "players_count": 3,
-      "duration_min": 90
+      "players_count": 3
     }
   ]
 }</pre>
@@ -622,9 +665,14 @@
                     <h4>Expected Values</h4>
                     <ul>
                         <li><code>stats.*</code>: non-negative integers.</li>
-                        <li><code>my_players[]</code>: player objects with <code>position</code> and <code>avatar_url</code>.</li>
-                        <li><code>upcoming_sessions[].session_type</code>: <code>GROUP</code>, <code>TEAM</code>, or <code>INDIVIDUAL</code>.</li>
-                        <li><code>upcoming_sessions[].start_time</code>: <code>HH:MM:SS</code> or <code>null</code>.</li>
+                        <li><code>my_players[]</code>: player objects with <code>position</code> and
+                            <code>avatar_url</code>.
+                        </li>
+                        <li><code>upcoming_sessions[].session_type</code>: <code>GROUP</code>, <code>TEAM</code>, or
+                            <code>INDIVIDUAL</code>.
+                        </li>
+                        <li><code>upcoming_sessions[].start_time</code>: <code>HH:MM:SS</code> or <code>null</code>.
+                        </li>
                     </ul>
                 </div>
             </div>
@@ -634,7 +682,8 @@
     <section class="section api-section" id="coach-players">
         <h2>Coach Players</h2>
 
-        <div class="endpoint" data-search="GET /api/coach/players coach players players position code state avatar_url q tab">
+        <div class="endpoint"
+             data-search="GET /api/coach/players coach players players position code state avatar_url q tab">
             <div><span class="badge get">GET</span><span class="path">/api/coach/players/</span></div>
             <p class="meta">Authenticated coach only. Returns the signed-in coach players list.</p>
             <div class="grid">
@@ -642,7 +691,8 @@
                     <h4>Query Params</h4>
                     <ul>
                         <li><code>q</code>: search by player name, email, or position</li>
-                        <li><code>tab</code>: <code>ALL</code>, <code>ACTIVE</code>, <code>INJURED</code>, or <code>NEEDS_REVIEW</code></li>
+                        <li><code>tab</code>: <code>ALL</code>, <code>ACTIVE</code>, <code>INJURED</code>, or <code>NEEDS_REVIEW</code>
+                        </li>
                     </ul>
                 </div>
                 <div class="card">
@@ -667,21 +717,40 @@
                     <h4>Expected Values</h4>
                     <ul>
                         <li><code>q</code>: optional search string.</li>
-                        <li><code>tab</code>: uppercase only: <code>ALL</code>, <code>ACTIVE</code>, <code>INJURED</code>, <code>NEEDS_REVIEW</code>.</li>
-                        <li><code>players[].state</code>: <code>ACTIVE</code>, <code>INJURED</code>, or <code>NEEDS_REVIEW</code>.</li>
-                        <li><code>players[]</code>: player objects with <code>position</code> and <code>avatar_url</code>.</li>
+                        <li><code>tab</code>: uppercase only: <code>ALL</code>, <code>ACTIVE</code>,
+                            <code>INJURED</code>, <code>NEEDS_REVIEW</code>.
+                        </li>
+                        <li><code>players[].state</code>: <code>ACTIVE</code>, <code>INJURED</code>, or <code>NEEDS_REVIEW</code>.
+                        </li>
+                        <li><code>players[]</code>: player objects with <code>position</code> and
+                            <code>avatar_url</code>.
+                        </li>
                     </ul>
+                </div>
+                <div class="card">
+                    <h4>Error Responses</h4>
+                    <p>Errors for invalid <code>tab</code> include the accepted values in <code>expected</code>:</p>
+                    <pre>HTTP 400
+{
+  "detail": "Invalid tab. Use uppercase values.",
+  "expected": ["ALL", "ACTIVE", "INJURED", "NEEDS_REVIEW"]
+}</pre>
                 </div>
             </div>
         </div>
 
-        <div class="endpoint" data-search="GET /api/coach/players/player_id player overview stats plans dateOfBirth heightCm weightKg progressRate attendance coachInsights recentActivity performanceMetrics startTime endTime avatar_url">
+        <div class="endpoint"
+             data-search="GET /api/coach/players/player_id player overview stats plans dateOfBirth heightCm weightKg progressRate attendance coachInsights recentActivity performanceMetrics startTime endTime avatar_url">
             <div><span class="badge get">GET</span><span class="path">/api/coach/players/&lt;player_id&gt;/</span></div>
-            <p class="meta">Authenticated coach only. Returns the coach-facing player profile overview for one player that belongs to the signed-in coach. The response is grouped into player info, overview, stats, and plans.</p>
+            <p class="meta">Authenticated coach only. Returns the coach-facing player profile overview for one player
+                that belongs to the signed-in coach. The response is grouped into player info, overview, stats, and
+                plans.</p>
             <div class="grid">
                 <div class="card">
                     <h4>Path Params</h4>
-                    <ul><li><code>player_id</code>: player user UUID</li></ul>
+                    <ul>
+                        <li><code>player_id</code>: player user UUID</li>
+                    </ul>
                 </div>
                 <div class="card">
                     <h4>Response 200</h4>
@@ -741,7 +810,6 @@
         "date": "2026-04-08",
         "startTime": "16:30",
         "endTime": "18:00",
-        "durationMinutes": 90,
         "status": "MISSED"
       }
     ]
@@ -786,10 +854,16 @@
                 <div class="card">
                     <h4>Expected Values</h4>
                     <ul>
-                        <li><code>player.position</code>: object with <code>id</code>, <code>name</code>, <code>code</code>; <code>avatar_url</code> is always present.</li>
-                        <li><code>player.foot</code>: <code>RIGHT</code>, <code>LEFT</code>, <code>BOTH</code>, or <code>null</code>.</li>
+                        <li><code>player.position</code>: object with <code>id</code>, <code>name</code>,
+                            <code>code</code>; <code>avatar_url</code> is always present.
+                        </li>
+                        <li><code>player.foot</code>: <code>RIGHT</code>, <code>LEFT</code>, <code>BOTH</code>, or
+                            <code>null</code>.
+                        </li>
                         <li><code>overview.coachInsights</code>: ordered list of strings.</li>
-                        <li><code>overview.recentActivity[].status</code>: <code>COMPLETED</code> or <code>MISSED</code>; times use <code>HH:MM</code>.</li>
+                        <li><code>overview.recentActivity[].status</code>: <code>COMPLETED</code> or <code>MISSED</code>;
+                            times use <code>HH:MM</code>.
+                        </li>
                     </ul>
                 </div>
             </div>
@@ -823,20 +897,26 @@
                     <h4>Expected Values</h4>
                     <ul>
                         <li><code>plans[].plan_id</code>: UUID string.</li>
-                        <li><code>plans[].start_date</code>, <code>plans[].end_date</code>: <code>YYYY-MM-DD</code>.</li>
-                        <li><code>plans[].status</code>: uppercase plan token, currently <code>DRAFT</code> or <code>PUBLISHED</code>.</li>
+                        <li><code>plans[].start_date</code>, <code>plans[].end_date</code>: <code>YYYY-MM-DD</code>.
+                        </li>
+                        <li><code>plans[].status</code>: uppercase plan token, currently <code>DRAFT</code> or <code>PUBLISHED</code>.
+                        </li>
                     </ul>
                 </div>
             </div>
         </div>
 
-        <div class="endpoint" data-search="GET /api/coach/plans/plan_id detail assigned_players position training_sessions day_label time_range assigned_players_count">
+        <div class="endpoint"
+             data-search="GET /api/coach/plans/plan_id detail assigned_players position training_sessions day_label time_range assigned_players_count">
             <div><span class="badge get">GET</span><span class="path">/api/coach/plans/&lt;plan_id&gt;/</span></div>
-            <p class="meta">Authenticated coach only. Returns the plan detail in the same grouped shape used by the plans screen.</p>
+            <p class="meta">Authenticated coach only. Returns the plan detail in the same grouped shape used by the
+                plans screen.</p>
             <div class="grid">
                 <div class="card">
                     <h4>Path Params</h4>
-                    <ul><li><code>plan_id</code>: training plan UUID</li></ul>
+                    <ul>
+                        <li><code>plan_id</code>: training plan UUID</li>
+                    </ul>
                 </div>
                 <div class="card">
                     <h4>Response 200</h4>
@@ -881,17 +961,24 @@
                 <div class="card">
                     <h4>Expected Values</h4>
                     <ul>
-                        <li><code>assigned_players[]</code>: player objects with <code>position</code> and <code>avatar_url</code>.</li>
-                        <li><code>training_sessions[].sessions[].session_type</code>: <code>GROUP</code>, <code>TEAM</code>, or <code>INDIVIDUAL</code>.</li>
-                        <li><code>training_sessions[].sessions[].time_range</code>: <code>HH:MM - HH:MM</code> or empty string.</li>
+                        <li><code>assigned_players[]</code>: player objects with <code>position</code> and <code>avatar_url</code>.
+                        </li>
+                        <li><code>training_sessions[].sessions[].session_type</code>: <code>GROUP</code>,
+                            <code>TEAM</code>, or <code>INDIVIDUAL</code>.
+                        </li>
+                        <li><code>training_sessions[].sessions[].time_range</code>: <code>HH:MM - HH:MM</code> or empty
+                            string.
+                        </li>
                     </ul>
                 </div>
             </div>
         </div>
 
-        <div class="endpoint" data-search="POST /api/coach/plans create plan sessions assignee_players session_type start_time end_time invalid_player_ids">
+        <div class="endpoint"
+             data-search="POST /api/coach/plans create plan sessions assignee_players session_type start_time end_time invalid_player_ids">
             <div><span class="badge post">POST</span><span class="path">/api/coach/plans/</span></div>
-            <p class="meta">Authenticated coach only. Creates a plan, its sessions, and player assignments in one request.</p>
+            <p class="meta">Authenticated coach only. Creates a plan, its sessions, and player assignments in one
+                request.</p>
             <div class="grid">
                 <div class="card">
                     <h4>Request Body</h4>
@@ -946,7 +1033,8 @@
                     <h4>Error Notes</h4>
                     <ul>
                         <li><code>400</code> if a session date is outside the plan date range</li>
-                        <li><code>400</code> if only one of <code>start_time</code> or <code>end_time</code> is sent</li>
+                        <li><code>400</code> if only one of <code>start_time</code> or <code>end_time</code> is sent
+                        </li>
                         <li><code>400</code> if <code>end_time &lt;= start_time</code></li>
                         <li><code>400</code> if <code>assignee_players</code> is missing or empty</li>
                         <li><code>400</code> if any assigned player does not belong to the signed-in coach</li>
@@ -955,10 +1043,15 @@
                 <div class="card">
                     <h4>Expected Values</h4>
                     <ul>
-                        <li><code>sessions[].session_type</code>: uppercase only: <code>GROUP</code>, <code>TEAM</code>, <code>INDIVIDUAL</code>.</li>
-                        <li><code>sessions[].start_time</code>, <code>sessions[].end_time</code>: <code>HH:MM</code>; send both together.</li>
+                        <li><code>sessions[].session_type</code>: uppercase only: <code>GROUP</code>, <code>TEAM</code>,
+                            <code>INDIVIDUAL</code>.
+                        </li>
+                        <li><code>sessions[].start_time</code>, <code>sessions[].end_time</code>: <code>HH:MM</code>;
+                            send both together.
+                        </li>
                         <li><code>assignee_players[]</code>: non-empty array of owned player UUID objects.</li>
-                        <li><code>plan.status</code> and created <code>sessions[].session_type</code> return uppercase.</li>
+                        <li><code>plan.status</code> and created <code>sessions[].session_type</code> return uppercase.
+                        </li>
                     </ul>
                 </div>
             </div>
@@ -1022,14 +1115,16 @@
                     <ul>
                         <li><code>title</code>, <code>start_date</code>, <code>end_date</code>: patchable fields.</li>
                         <li><code>status</code>: uppercase plan token.</li>
-                        <li><code>total_sessions</code>, <code>assigned_players_count</code>: non-negative integers.</li>
+                        <li><code>total_sessions</code>, <code>assigned_players_count</code>: non-negative integers.
+                        </li>
                     </ul>
                 </div>
             </div>
         </div>
 
         <div class="endpoint" data-search="DELETE /api/coach/plans delete plan destroy">
-            <div><span class="badge delete">DELETE</span><span class="path">/api/coach/plans/&lt;plan_id&gt;/</span></div>
+            <div><span class="badge delete">DELETE</span><span class="path">/api/coach/plans/&lt;plan_id&gt;/</span>
+            </div>
             <p class="meta">Authenticated coach only. Deletes the plan via the default DRF destroy action.</p>
             <div class="grid">
                 <div class="card">
@@ -1045,14 +1140,120 @@
                 </div>
             </div>
         </div>
+
+        <div class="endpoint"
+             data-search="POST /api/coach/plans/sessions/start coach session lifecycle start presentPlayerIds attendance IN_PROGRESS">
+            <div><span class="badge post">POST</span><span class="path">/api/coach/plans/&lt;plan_id&gt;/sessions/&lt;session_id&gt;/start/</span>
+            </div>
+            <p class="meta">Authenticated coach only; the signed-in coach must be the plan creator. Starts the session
+                lifecycle and records present players. Players not in the list are treated as missed once the session
+                is ended.</p>
+            <div class="grid">
+                <div class="card">
+                    <h4>Path Params</h4>
+                    <ul>
+                        <li><code>plan_id</code>: training plan UUID.</li>
+                        <li><code>session_id</code>: training session UUID; must belong to <code>plan_id</code>.</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h4>Request Body</h4>
+                    <pre>{
+  "presentPlayerIds": ["uuid", "uuid"]
+}</pre>
+                    <p><code>presentPlayerIds</code> is optional and may be an empty list. Each id must be assigned to
+                        the plan.</p>
+                </div>
+                <div class="card">
+                    <h4>Response 200</h4>
+                    <pre>{
+  "session_id": "uuid",
+  "lifecycle": {
+    "status": "IN_PROGRESS",
+    "started_at": "2026-04-16T18:00:00+00:00",
+    "ended_at": null
+  },
+  "present_player_ids": ["uuid", "uuid"],
+  "missed_player_ids": ["uuid"]
+}</pre>
+                </div>
+                <div class="card">
+                    <h4>Expected Values</h4>
+                    <ul>
+                        <li><code>lifecycle.status</code>: always <code>IN_PROGRESS</code> after a successful start.</li>
+                        <li><code>present_player_ids</code>: sorted UUID strings echoing accepted attendance.</li>
+                        <li><code>missed_player_ids</code>: assigned players not in the present list (sorted UUID
+                            strings).
+                        </li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h4>Error Responses</h4>
+                    <p>Player id not assigned to the plan:</p>
+                    <pre>HTTP 400
+{
+  "detail": "presentPlayerIds contains players not assigned to this plan.",
+  "expected": ["uuid", "uuid"]
+}</pre>
+                    <p>Other errors:</p>
+                    <pre>HTTP 401   unauthenticated
+HTTP 403   authenticated user is not the plan creator
+HTTP 404   { "detail": "Session not found in this plan." }
+HTTP 409   { "detail": "Session has already been started." }</pre>
+                </div>
+            </div>
+        </div>
+
+        <div class="endpoint"
+             data-search="POST /api/coach/plans/sessions/end coach session lifecycle end COMPLETED">
+            <div><span class="badge post">POST</span><span class="path">/api/coach/plans/&lt;plan_id&gt;/sessions/&lt;session_id&gt;/end/</span>
+            </div>
+            <p class="meta">Authenticated coach only; the signed-in coach must be the plan creator. Ends an
+                in-progress session and locks the attendance roster taken at start time.</p>
+            <div class="grid">
+                <div class="card">
+                    <h4>Path Params</h4>
+                    <ul>
+                        <li><code>plan_id</code>: training plan UUID.</li>
+                        <li><code>session_id</code>: training session UUID; must belong to <code>plan_id</code>.</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h4>Request Body</h4>
+                    <pre>{}</pre>
+                </div>
+                <div class="card">
+                    <h4>Response 200</h4>
+                    <pre>{
+  "session_id": "uuid",
+  "lifecycle": {
+    "status": "COMPLETED",
+    "started_at": "2026-04-16T18:00:00+00:00",
+    "ended_at": "2026-04-16T19:30:00+00:00"
+  },
+  "present_player_ids": ["uuid", "uuid"],
+  "missed_player_ids": ["uuid"]
+}</pre>
+                </div>
+                <div class="card">
+                    <h4>Error Responses</h4>
+                    <pre>HTTP 401   unauthenticated
+HTTP 403   authenticated user is not the plan creator
+HTTP 404   { "detail": "Session not found in this plan." }
+HTTP 409   { "detail": "Session must be in progress to be ended." }</pre>
+                </div>
+            </div>
+        </div>
     </section>
 
     <section class="section api-section" id="player">
         <h2>Player</h2>
 
-        <div class="endpoint" data-search="GET /api/player/overview overview readiness upcoming_sessions weekly_progress ai_insights score label sleep_hours mood sore_zones load_ratio streak_days">
-            <div><span class="badge get">GET</span><span class="path">/api/player/overview/</span></div>
-            <p class="meta">Authenticated player only. Returns a full player performance overview in a single round trip: readiness, upcoming sessions, weekly load progress, and AI insights.</p>
+        <div class="endpoint"
+             data-search="GET /api/player/home overview readiness upcoming_sessions weekly_progress ai_insights score label sleep_hours mood sore_zones load_ratio streak_days">
+            <div><span class="badge get">GET</span><span class="path">/api/player/home/</span></div>
+            <p class="meta">Authenticated player only. Returns a full player performance overview in a single round
+                trip: readiness, upcoming sessions, weekly load progress, and AI insights.</p>
             <div class="grid">
                 <div class="card">
                     <h4>Response 200</h4>
@@ -1072,12 +1273,11 @@
       "title": "Team training",
       "session_date": "2026-04-16",
       "start_time": "18:00:00",
-      "duration_minutes": 90,
+      "end_time": "19:30:00",
       "intensity": "high",
       "location": "Main Pitch A",
       "squad_size": 22,
-      "coach_note": "Pressing from the front...",
-      "is_today": true
+      "coach_note": "Pressing from the front..."
     }
   ],
   "weekly_progress": {
@@ -1117,23 +1317,39 @@
                 <div class="card">
                     <h4>Field Reference</h4>
                     <ul>
-                        <li><code>readiness.label</code>: score bands — <code>&gt;=80</code> "Ready to perform", <code>&gt;=60</code> "Good to train", <code>&gt;=40</code> "Train with caution", <code>&lt;40</code> "Consider rest today".</li>
-                        <li><code>upcoming_sessions</code>: next 3 sessions from today onwards, ordered by date then start time.</li>
-                        <li><code>upcoming_sessions[].intensity</code>: <code>low</code> | <code>medium</code> | <code>high</code>.</li>
-                        <li><code>upcoming_sessions[].is_today</code>: <code>true</code> when <code>session_date</code> equals today.</li>
-                        <li><code>weekly_progress.load_status</code>: ratio <code>&lt;1.3</code> → <code>safe</code>, <code>&lt;1.5</code> → <code>caution</code>, <code>&gt;=1.5</code> → <code>danger</code>.</li>
-                        <li><code>weekly_progress.distance_delta_pct</code>: <code>null</code> when no previous week data.</li>
+                        <li><code>readiness.label</code>: score bands — <code>&gt;=80</code> "Ready to perform", <code>&gt;=60</code>
+                            "Good to train", <code>&gt;=40</code> "Train with caution", <code>&lt;40</code> "Consider
+                            rest today".
+                        </li>
+                        <li><code>upcoming_sessions</code>: next 3 sessions from today onwards, ordered by date then
+                            start time.
+                        </li>
+                        <li><code>upcoming_sessions[].intensity</code>: <code>low</code> | <code>medium</code> | <code>high</code>.
+                        </li>
+                        <li><code>weekly_progress.load_status</code>: ratio <code>&lt;1.3</code> → <code>safe</code>,
+                            <code>&lt;1.5</code> → <code>caution</code>, <code>&gt;=1.5</code> → <code>danger</code>.
+                        </li>
+                        <li><code>weekly_progress.distance_delta_pct</code>: <code>null</code> when no previous week
+                            data.
+                        </li>
                         <li><code>weekly_progress.load_ratio</code>: <code>null</code> when chronic load is 0.</li>
-                        <li><code>ai_insights[].tag</code>: <code>load</code> | <code>intensity</code> | <code>recovery</code>.</li>
+                        <li><code>ai_insights[].tag</code>: <code>load</code> | <code>intensity</code> |
+                            <code>recovery</code>.
+                        </li>
                         <li>All decimal fields are serialized as floats (not strings).</li>
                     </ul>
                 </div>
             </div>
         </div>
 
-        <div class="endpoint" data-search="GET PATCH PUT /api/player/profile player profile onboarding height_cm weight_kg date_of_birth phone foot login_status team_id avatar_url position">
-            <div><span class="badge get">GET</span><span class="badge patch">PATCH</span><span class="badge put">PUT</span><span class="path">/api/player/profile/</span></div>
-            <p class="meta">Authenticated player only. Returns the current player profile and updates the player-owned setup fields after password setup. Both <code>PATCH</code> and <code>PUT</code> are accepted. <code>login_status</code> becomes <code>COMPLETE</code> only when the player has an assigned position and all required setup fields are filled; otherwise it remains <code>FIRST_LOGIN</code>.</p>
+        <div class="endpoint"
+             data-search="GET PATCH PUT /api/player/profile player profile onboarding height_cm weight_kg date_of_birth phone foot login_status team_id avatar_url position">
+            <div><span class="badge get">GET</span><span class="badge patch">PATCH</span><span
+                    class="badge put">PUT</span><span class="path">/api/player/profile/</span></div>
+            <p class="meta">Authenticated player only. Returns the current player profile and updates the player-owned
+                setup fields after password setup. Both <code>PATCH</code> and <code>PUT</code> are accepted. <code>login_status</code>
+                becomes <code>COMPLETE</code> only when the player has an assigned position and all required setup
+                fields are filled; otherwise it remains <code>FIRST_LOGIN</code>.</p>
             <div class="grid">
                 <div class="card">
                     <h4>Request Body (PATCH/PUT)</h4>
@@ -1172,14 +1388,20 @@
                         <li><code>401</code> if the user is not authenticated</li>
                         <li><code>403</code> if the authenticated user is not a player</li>
                         <li><code>400</code> if any provided field is invalid</li>
-                        <li><code>400</code> if removed fields such as <code>position_id</code>, <code>state</code>, or <code>fitness_level</code> are sent</li>
+                        <li><code>400</code> if removed fields such as <code>position_id</code>, <code>state</code>, or
+                            <code>fitness_level</code> are sent
+                        </li>
                     </ul>
                 </div>
                 <div class="card">
                     <h4>Expected Values</h4>
                     <ul>
-                        <li><code>foot</code>: uppercase only <code>RIGHT</code>, <code>LEFT</code>, <code>BOTH</code>, or <code>null</code>.</li>
-                        <li><code>position</code>: object with <code>id</code>, <code>name</code>, <code>code</code>; never a plain string.</li>
+                        <li><code>foot</code>: uppercase only <code>RIGHT</code>, <code>LEFT</code>, <code>BOTH</code>,
+                            or <code>null</code>.
+                        </li>
+                        <li><code>position</code>: object with <code>id</code>, <code>name</code>, <code>code</code>;
+                            never a plain string.
+                        </li>
                         <li><code>avatar_url</code>: always present, returns media URL or <code>null</code>.</li>
                         <li><code>login_status</code>: <code>FIRST_LOGIN</code> or <code>COMPLETE</code>.</li>
                     </ul>
@@ -1187,44 +1409,48 @@
             </div>
         </div>
 
-        <div class="endpoint" data-search="GET /api/player/training/day player training date header summary plans sessions_count completed">
-            <div><span class="badge get">GET</span><span class="path">/api/player/training/day/</span></div>
-            <p class="meta">Authenticated player only. Returns all sessions for a specific day grouped by plan.</p>
+        <div class="endpoint"
+             data-search="GET /api/player/training player training range start_date end_date days plans sessions session_type intensity status">
+            <div><span class="badge get">GET</span><span class="path">/api/player/training/</span></div>
+            <p class="meta">Authenticated player only. Returns the player's training sessions for an inclusive date range, grouped per day and per plan. Only days with at least one session are returned.</p>
             <div class="grid">
                 <div class="card">
                     <h4>Query Params</h4>
                     <ul>
-                        <li><code>date</code>: optional, format <code>YYYY-MM-DD</code>. Defaults to today.</li>
+                        <li><code>start_date</code>: optional, format <code>YYYY-MM-DD</code>. Defaults to today.</li>
+                        <li><code>end_date</code>: optional, format <code>YYYY-MM-DD</code>. Defaults to today.</li>
+                        <li>Range must satisfy <code>start_date &lt;= end_date</code> and span at most 31 days.</li>
                     </ul>
                 </div>
                 <div class="card">
                     <h4>Response 200</h4>
                     <pre>{
-  "date": "2026-04-02",
-  "header": {
-    "month": "April 2026",
-    "day": 2,
-    "weekday": "Thu"
-  },
-  "summary": {
-    "completed_sessions": 1,
-    "total_sessions": 3,
-    "total_duration_min": 210
-  },
-  "plans": [
+  "start_date": "2026-04-01",
+  "end_date": "2026-04-07",
+  "days": [
     {
-      "plan_id": "uuid",
-      "title": "Speed Plan",
-      "sessions": [
+      "date": "2026-04-01",
+      "plans": [
         {
-          "session_id": "uuid",
-          "title": "Warm-up",
-          "duration_min": 30,
-          "status": "COMPLETED"
+          "plan_id": "uuid",
+          "title": "Speed Plan",
+          "sessions": [
+            {
+              "session_id": "uuid",
+              "title": "Warm-up",
+              "session_type": "GROUP",
+              "session_date": "2026-04-01",
+              "start_time": "10:00:00",
+              "end_time": "10:30:00",
+              "intensity": "MEDIUM",
+              "location": "Main Field",
+              "squad_size": 20,
+              "coach_note": "Keep pace moderate",
+              "status": "COMPLETED"
+            }
+          ]
         }
-      ],
-      "sessions_count": 1,
-      "completed": true
+      ]
     }
   ]
 }</pre>
@@ -1232,49 +1458,126 @@
                 <div class="card">
                     <h4>Expected Values</h4>
                     <ul>
-                        <li><code>date</code>: optional query param in <code>YYYY-MM-DD</code>; response echoes resolved date.</li>
-                        <li><code>plans[].sessions[].status</code>: <code>NOT_STARTED</code>, <code>IN_PROGRESS</code>, or <code>COMPLETED</code>.</li>
-                        <li><code>summary</code> fields: non-negative integers.</li>
-                        <li><code>plans[].completed</code>: boolean.</li>
+                        <li><code>days</code>: sparse list ordered ascending by <code>date</code>; days with no sessions assigned to the player are omitted.</li>
+                        <li><code>plans</code>: ordered by plan <code>title</code> (case-insensitive).</li>
+                        <li><code>sessions</code>: ordered by <code>start_time</code>.</li>
+                        <li><code>session_type</code>: <code>GROUP</code> | <code>TEAM</code> | <code>INDIVIDUAL</code>.</li>
+                        <li><code>intensity</code>: <code>LOW</code> | <code>MEDIUM</code> | <code>HIGH</code>.</li>
+                        <li><code>status</code>: <code>NOT_STARTED</code> | <code>IN_PROGRESS</code> | <code>COMPLETED</code> | <code>MISSED</code>. <code>MISSED</code> appears when the coach has ended the session and the player was not in the present list.</li>
+                        <li><code>start_time</code> / <code>end_time</code>: <code>HH:MM:SS</code> or <code>null</code>. Clients derive duration from these.</li>
                     </ul>
+                </div>
+                <div class="card">
+                    <h4>Error Responses</h4>
+                    <p>Invalid date format includes the accepted format in <code>expected</code>:</p>
+                    <pre>HTTP 400
+{
+  "detail": "Invalid start_date format.",
+  "expected": ["YYYY-MM-DD"]
+}</pre>
+                    <p>Range validation errors:</p>
+                    <pre>HTTP 400
+{ "detail": "start_date must be less than or equal to end_date." }
+
+HTTP 400
+{ "detail": "Date range must not exceed 31 days." }</pre>
                 </div>
             </div>
         </div>
 
-        <div class="endpoint" data-search="POST /api/player/training/sessions/status player session status COMPLETED IN_PROGRESS NOT_STARTED">
-            <div><span class="badge post">POST</span><span class="path">/api/player/training/sessions/&lt;session_id&gt;/status/</span></div>
-            <p class="meta">Authenticated player only. Updates the player progress status for one session.</p>
+        <div class="endpoint"
+             data-search="GET /api/player/sessions/count player sessions count start_date end_date days completed_count missed_count in_progress_count not_started_count">
+            <div><span class="badge get">GET</span><span class="path">/api/player/sessions/count/</span></div>
+            <p class="meta">Authenticated player only. Returns per-day session-status counts for the requested
+                inclusive date range (for calendar rendering). Counts are scoped to sessions in plans the player is
+                assigned to. Days with no assigned sessions are zero-filled.</p>
             <div class="grid">
                 <div class="card">
-                    <h4>Path Params</h4>
-                    <ul><li><code>session_id</code>: training session UUID</li></ul>
-                </div>
-                <div class="card">
-                    <h4>Request Body</h4>
-                    <pre>{
-  "status": "COMPLETED"
-}</pre>
+                    <h4>Query Params</h4>
+                    <ul>
+                        <li><code>start_date</code>: required, format <code>YYYY-MM-DD</code>.</li>
+                        <li><code>end_date</code>: required, format <code>YYYY-MM-DD</code>.</li>
+                        <li><code>start_date</code> must be less than or equal to <code>end_date</code>.</li>
+                        <li>The inclusive range must not exceed <strong>31 days</strong>.</li>
+                    </ul>
                 </div>
                 <div class="card">
                     <h4>Response 200</h4>
                     <pre>{
-  "session_id": "uuid",
-  "status": "COMPLETED"
+  "start_date": "2026-04-01",
+  "end_date": "2026-04-30",
+  "days": [
+    { "date": "2026-04-01", "completed_count": 2, "missed_count": 1, "in_progress_count": 2, "not_started_count": 1 },
+    { "date": "2026-04-02", "completed_count": 0, "missed_count": 0, "in_progress_count": 0, "not_started_count": 0 }
+  ]
 }</pre>
                 </div>
                 <div class="card">
                     <h4>Expected Values</h4>
                     <ul>
-                        <li><code>session_id</code>: path UUID and echoed response UUID.</li>
-                        <li><code>status</code>: uppercase only <code>NOT_STARTED</code>, <code>IN_PROGRESS</code>, or <code>COMPLETED</code>.</li>
+                        <li><code>start_date</code> / <code>end_date</code>: echo the requested values in
+                            <code>YYYY-MM-DD</code>.
+                        </li>
+                        <li><code>days</code>: ordered list covering every day in the inclusive range. Days with no
+                            assigned sessions are zero-filled.
+                        </li>
+                        <li><code>days[].date</code>: <code>YYYY-MM-DD</code>.</li>
+                        <li><code>days[].completed_count</code>: sessions whose lifecycle is <code>completed</code>
+                            and the player has an attendance row.
+                        </li>
+                        <li><code>days[].missed_count</code>: sessions whose lifecycle is <code>completed</code> and
+                            the player has no attendance row (player was not in the coach's present list).
+                        </li>
+                        <li><code>days[].in_progress_count</code>: sessions whose lifecycle is
+                            <code>in_progress</code>.
+                        </li>
+                        <li><code>days[].not_started_count</code>: sessions with no lifecycle row or with lifecycle
+                            <code>not_started</code>.
+                        </li>
                     </ul>
+                </div>
+                <div class="card">
+                    <h4>Error Responses</h4>
+                    <p>Missing query params:</p>
+                    <pre>HTTP 400
+{
+  "detail": "start_date is required.",
+  "expected": ["YYYY-MM-DD"]
+}
+
+HTTP 400
+{
+  "detail": "end_date is required.",
+  "expected": ["YYYY-MM-DD"]
+}</pre>
+                    <p>Invalid date format:</p>
+                    <pre>HTTP 400
+{
+  "detail": "Invalid start_date format.",
+  "expected": ["YYYY-MM-DD"]
+}
+
+HTTP 400
+{
+  "detail": "Invalid end_date format.",
+  "expected": ["YYYY-MM-DD"]
+}</pre>
+                    <p>Range validation:</p>
+                    <pre>HTTP 400
+{ "detail": "start_date must be less than or equal to end_date." }
+
+HTTP 400
+{ "detail": "Date range must not exceed 31 days." }</pre>
+                    <p><code>401</code>: unauthenticated. <code>403</code>: authenticated non-player.</p>
                 </div>
             </div>
         </div>
 
-        <div class="endpoint" data-search="GET /api/player/checkins/today/status player checkin today submitted readiness_score">
+        <div class="endpoint"
+             data-search="GET /api/player/checkins/today/status player checkin today submitted readiness_score">
             <div><span class="badge get">GET</span><span class="path">/api/player/checkins/today/status/</span></div>
-            <p class="meta">Authenticated player only. Returns whether the player has already submitted a check-in today and, if so, the check-in detail.</p>
+            <p class="meta">Authenticated player only. Returns whether the player has already submitted a check-in today
+                and, if so, the check-in detail.</p>
             <div class="grid">
                 <div class="card">
                     <h4>Response 200 — not yet submitted</h4>
@@ -1303,9 +1606,11 @@
             </div>
         </div>
 
-        <div class="endpoint" data-search="POST /api/player/checkins player checkin submit sleep_hours sleep_quality mood sore_zones readiness_score 201 409">
+        <div class="endpoint"
+             data-search="POST /api/player/checkins player checkin submit sleep_hours sleep_quality mood sore_zones readiness_score 201 409">
             <div><span class="badge post">POST</span><span class="path">/api/player/checkins/</span></div>
-            <p class="meta">Authenticated player only. Submits the daily check-in. Returns <code>409</code> if a check-in for today already exists.</p>
+            <p class="meta">Authenticated player only. Submits the daily check-in. Returns <code>409</code> if a
+                check-in for today already exists.</p>
             <div class="grid">
                 <div class="card">
                     <h4>Request Body</h4>
@@ -1334,9 +1639,16 @@
                     <h4>Expected Values</h4>
                     <ul>
                         <li><code>sleep_hours</code>: decimal 0–24.</li>
-                        <li><code>sleep_quality</code>: one of <code>poor</code>, <code>fair</code>, <code>good</code>, <code>great</code>.</li>
+                        <li><code>sleep_quality</code>: one of <code>poor</code>, <code>fair</code>, <code>good</code>,
+                            <code>great</code>.
+                        </li>
                         <li><code>mood</code>: integer 1–5.</li>
-                        <li><code>sore_zones</code>: array of zone strings (may be empty). Valid values: <code>head_neck</code>, <code>shoulders</code>, <code>upper_back</code>, <code>lower_back</code>, <code>hip_groin</code>, <code>left_quad</code>, <code>right_quad</code>, <code>hamstring</code>, <code>knee</code>, <code>calf</code>, <code>ankle_foot</code>.</li>
+                        <li><code>sore_zones</code>: array of zone strings (may be empty). Valid values:
+                            <code>head_neck</code>, <code>shoulders</code>, <code>upper_back</code>,
+                            <code>lower_back</code>, <code>hip_groin</code>, <code>left_quad</code>,
+                            <code>right_quad</code>, <code>hamstring</code>, <code>knee</code>, <code>calf</code>,
+                            <code>ankle_foot</code>.
+                        </li>
                         <li><code>readiness_score</code>: server-computed integer 0–100.</li>
                     </ul>
                 </div>
@@ -1345,6 +1657,63 @@
                     <ul>
                         <li><code>400</code>: validation error (invalid field values).</li>
                         <li><code>409</code>: check-in already submitted for today.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="endpoint"
+             data-search="PUT /api/player/checkins player checkin update edit today sleep_hours sleep_quality mood sore_zones readiness_score 200 404">
+            <div><span class="badge put">PUT</span><span class="path">/api/player/checkins/</span></div>
+            <p class="meta">Authenticated player only. Updates today's check-in and recomputes
+                <code>readiness_score</code>. Returns <code>404</code> if no check-in has been submitted for today.</p>
+            <div class="grid">
+                <div class="card">
+                    <h4>Request Body</h4>
+                    <pre>{
+  "sleep_hours": 8,
+  "sleep_quality": "great",
+  "mood": 5,
+  "sore_zones": []
+}</pre>
+                </div>
+                <div class="card">
+                    <h4>Response 200</h4>
+                    <pre>{
+  "id": "uuid",
+  "player_id": "uuid",
+  "date": "2026-04-16",
+  "sleep_hours": "8.00",
+  "sleep_quality": "great",
+  "mood": 5,
+  "sore_zones": [],
+  "readiness_score": 100,
+  "created_at": "2026-04-16T06:00:00Z"
+}</pre>
+                </div>
+                <div class="card">
+                    <h4>Expected Values</h4>
+                    <ul>
+                        <li>All fields are required; the full check-in is replaced.</li>
+                        <li><code>sleep_hours</code>: decimal 0–24.</li>
+                        <li><code>sleep_quality</code>: one of <code>poor</code>, <code>fair</code>, <code>good</code>,
+                            <code>great</code>.
+                        </li>
+                        <li><code>mood</code>: integer 1–5.</li>
+                        <li><code>sore_zones</code>: array of zone strings (may be empty). Valid values:
+                            <code>head_neck</code>, <code>shoulders</code>, <code>upper_back</code>,
+                            <code>lower_back</code>, <code>hip_groin</code>, <code>left_quad</code>,
+                            <code>right_quad</code>, <code>hamstring</code>, <code>knee</code>, <code>calf</code>,
+                            <code>ankle_foot</code>.
+                        </li>
+                        <li><code>readiness_score</code>: server-recomputed integer 0–100.</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h4>Error Responses</h4>
+                    <ul>
+                        <li><code>400</code>: validation error (invalid field values).</li>
+                        <li><code>404</code>: no check-in submitted for today.</li>
                     </ul>
                 </div>
             </div>
@@ -1376,13 +1745,15 @@
                     <ul>
                         <li><code>positions[].id</code>: integer position ID.</li>
                         <li><code>positions[].code</code>: short uppercase position code.</li>
-                        <li><code>positions[].category</code>: display group such as <code>Attack</code> or <code>Defense</code>.</li>
+                        <li><code>positions[].category</code>: display group such as <code>Attack</code> or <code>Defense</code>.
+                        </li>
                     </ul>
                 </div>
             </div>
         </div>
 
-        <div class="endpoint" data-search="GET /api/user-info user info role player coach avatar_url certificate_image position">
+        <div class="endpoint"
+             data-search="GET /api/user-info user info role player coach avatar_url certificate_image position">
             <div><span class="badge get">GET</span><span class="path">/api/user-info/</span></div>
             <p class="meta">Authenticated. Returns the signed-in user profile summary and role-specific data.</p>
             <div class="grid">
@@ -1431,9 +1802,13 @@
                 <div class="card">
                     <h4>Expected Values</h4>
                     <ul>
-                        <li><code>role</code>: primary role string such as <code>Player</code> or <code>Coach</code>.</li>
-                        <li><code>player.position</code>: object with <code>id</code>, <code>name</code>, <code>code</code>; <code>avatar_url</code> is always present.</li>
-                        <li><code>coach.approval_status</code>: <code>PENDING</code>, <code>APPROVED</code>, or <code>REJECTED</code>.</li>
+                        <li><code>role</code>: primary role string such as <code>Player</code> or <code>Coach</code>.
+                        </li>
+                        <li><code>player.position</code>: object with <code>id</code>, <code>name</code>,
+                            <code>code</code>; <code>avatar_url</code> is always present.
+                        </li>
+                        <li><code>coach.approval_status</code>: <code>PENDING</code>, <code>APPROVED</code>, or <code>REJECTED</code>.
+                        </li>
                     </ul>
                 </div>
             </div>

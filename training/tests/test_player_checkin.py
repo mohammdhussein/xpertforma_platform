@@ -10,6 +10,7 @@ from training.statuses import SleepQuality
 
 
 CHECKIN_SUBMIT_URL   = "/api/player/checkins/"
+CHECKIN_UPDATE_URL   = "/api/player/checkins/"
 CHECKIN_STATUS_URL   = "/api/player/checkins/today/status/"
 
 VALID_PAYLOAD = {
@@ -155,3 +156,84 @@ class SubmitCheckinAPITests(TestCase):
         response = self.client.post(CHECKIN_SUBMIT_URL, payload, format="json")
         self.assertEqual(response.status_code, 201)
         self.assertEqual(response.data["sore_zones"], [])
+
+
+class UpdateTodayCheckinAPITests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.player = make_player()
+        self.client.force_authenticate(user=self.player)
+
+    def _create_todays_checkin(self, **overrides):
+        defaults = dict(
+            player=self.player,
+            date=date.today(),
+            sleep_hours="5.00",
+            sleep_quality=SleepQuality.POOR,
+            mood=2,
+            sore_zones=["knee", "calf"],
+            readiness_score=30,
+        )
+        defaults.update(overrides)
+        return PlayerCheckin.objects.create(**defaults)
+
+    def test_update_returns_200_and_replaces_fields(self):
+        original = self._create_todays_checkin()
+        payload = {
+            "sleep_hours":   8,
+            "sleep_quality": SleepQuality.GREAT,
+            "mood":          5,
+            "sore_zones":    [],
+        }
+        response = self.client.put(CHECKIN_UPDATE_URL, payload, format="json")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["id"], str(original.id))
+        self.assertEqual(response.data["mood"], 5)
+        self.assertEqual(response.data["sleep_quality"], SleepQuality.GREAT)
+        self.assertEqual(response.data["sore_zones"], [])
+
+    def test_update_recomputes_readiness_score(self):
+        self._create_todays_checkin(readiness_score=30)
+        payload = {
+            "sleep_hours":   8,
+            "sleep_quality": SleepQuality.GREAT,
+            "mood":          5,
+            "sore_zones":    [],
+        }
+        response = self.client.put(CHECKIN_UPDATE_URL, payload, format="json")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["readiness_score"], 100)
+
+    def test_update_does_not_create_a_second_row(self):
+        self._create_todays_checkin()
+        self.client.put(CHECKIN_UPDATE_URL, VALID_PAYLOAD, format="json")
+        self.assertEqual(PlayerCheckin.objects.filter(player=self.player).count(), 1)
+
+    def test_update_returns_404_when_no_checkin_exists_today(self):
+        response = self.client.put(CHECKIN_UPDATE_URL, VALID_PAYLOAD, format="json")
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(PlayerCheckin.objects.filter(player=self.player).count(), 0)
+
+    def test_update_returns_400_on_invalid_sleep_quality(self):
+        self._create_todays_checkin()
+        payload = {**VALID_PAYLOAD, "sleep_quality": "excellent"}
+        response = self.client.put(CHECKIN_UPDATE_URL, payload, format="json")
+        self.assertEqual(response.status_code, 400)
+
+    def test_update_returns_400_on_missing_field(self):
+        self._create_todays_checkin()
+        payload = {k: v for k, v in VALID_PAYLOAD.items() if k != "mood"}
+        response = self.client.put(CHECKIN_UPDATE_URL, payload, format="json")
+        self.assertEqual(response.status_code, 400)
+
+    def test_update_returns_400_on_invalid_sore_zone(self):
+        self._create_todays_checkin()
+        payload = {**VALID_PAYLOAD, "sore_zones": ["not_a_real_zone"]}
+        response = self.client.put(CHECKIN_UPDATE_URL, payload, format="json")
+        self.assertEqual(response.status_code, 400)
+
+    def test_update_unauthenticated_returns_401(self):
+        self._create_todays_checkin()
+        self.client.logout()
+        response = self.client.put(CHECKIN_UPDATE_URL, VALID_PAYLOAD, format="json")
+        self.assertEqual(response.status_code, 401)

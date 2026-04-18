@@ -1,11 +1,18 @@
 from django.db.models import Q
-from rest_framework.exceptions import ParseError
 
+from accounts.exceptions import InvalidInputError
 from accounts.files import build_media_value_url
 from accounts.models import PlayerProfile
 from accounts.serializers.position import build_position_payload
-from accounts.statuses import normalize_player_state, parse_player_state_api_value
+from accounts.statuses import (
+    PLAYER_STATE_API_TO_DB,
+    normalize_player_state,
+    parse_player_state_api_value,
+)
 from xpertforma_platform.api_values import normalize_api_value
+
+
+VALID_COACH_PLAYERS_TAB_VALUES = ["ALL", *PLAYER_STATE_API_TO_DB.keys()]
 
 
 def get_coach_players_queryset(coach_user):
@@ -26,12 +33,18 @@ def build_coach_players_list_payload(coach_user, *, query="", tab="all"):
 
     normalized_tab = normalize_api_value(tab, default="ALL")
     if tab and tab != normalized_tab:
-        raise ParseError(detail="Invalid tab. Use uppercase values.")
+        raise InvalidInputError(
+            "Invalid tab. Use uppercase values.",
+            expected=VALID_COACH_PLAYERS_TAB_VALUES,
+        )
 
     if normalized_tab != "ALL":
         db_state = parse_player_state_api_value(normalized_tab)
         if db_state is None:
-            raise ParseError(detail="Invalid tab.")
+            raise InvalidInputError(
+                "Invalid tab.",
+                expected=VALID_COACH_PLAYERS_TAB_VALUES,
+            )
         queryset = queryset.filter(state=db_state)
 
     players = []
