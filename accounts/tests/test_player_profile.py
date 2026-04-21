@@ -130,7 +130,13 @@ class PlayerProfileEndpointTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.data["foot"], ["Use uppercase values."])
+        self.assertEqual(
+            response.data,
+            {
+                "detail": "Invalid foot value. Use uppercase values.",
+                "expected": ["BOTH", "LEFT", "RIGHT"],
+            },
+        )
 
     def test_player_profile_endpoint_requires_player_user(self):
         coach = User.objects.create_user(

@@ -27,7 +27,16 @@ class LoginEndpointTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.data, {"coach_status": {"register_status": "PENDING"}})
+        self.assertEqual(
+            response.data,
+            {
+                "coach_status": {
+                    "detail": "Coach account is pending approval.",
+                    "expected": ["APPROVED"],
+                    "register_status": "PENDING",
+                }
+            },
+        )
 
     def test_player_login_returns_uppercase_login_status(self):
         player = User.objects.create_user(

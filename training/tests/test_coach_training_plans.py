@@ -159,7 +159,13 @@ class CoachTrainingPlanValidationTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.data["session_type"], ["Use uppercase values."])
+        self.assertEqual(
+            response.data,
+            {
+                "detail": "Invalid session_type. Use uppercase values.",
+                "expected": ["GROUP", "INDIVIDUAL", "TEAM"],
+            },
+        )
 
     def test_rejects_session_with_only_one_time(self):
         response = self.client.post(
