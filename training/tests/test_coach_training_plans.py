@@ -61,7 +61,7 @@ class CoachTrainingPlanValidationTests(TestCase):
             title="Season Plan",
             start_date="2026-04-01",
             end_date="2026-04-05",
-            status="draft",
+            status="DRAFT",
         )
         TrainingSession.objects.create(
             plan=plan,
@@ -87,7 +87,7 @@ class CoachTrainingPlanValidationTests(TestCase):
             title="Screen Plan",
             start_date="2026-04-01",
             end_date="2026-04-05",
-            status="draft",
+            status="DRAFT",
         )
         TrainingPlanPlayer.objects.create(plan=plan, player=self.player, assigned_by=self.coach)
         TrainingSession.objects.create(
@@ -159,7 +159,13 @@ class CoachTrainingPlanValidationTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.data["session_type"], ["Use uppercase values."])
+        self.assertEqual(
+            response.data,
+            {
+                "detail": "Invalid session_type. Use uppercase values.",
+                "expected": ["GROUP", "INDIVIDUAL", "TEAM"],
+            },
+        )
 
     def test_rejects_session_with_only_one_time(self):
         response = self.client.post(

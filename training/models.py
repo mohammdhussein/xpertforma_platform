@@ -22,7 +22,7 @@ class TrainingPlan(models.Model):
     start_date = models.DateField()
     end_date = models.DateField()
 
-    status = models.CharField(max_length=20, default="draft")  # draft / published
+    status = models.CharField(max_length=20, default="DRAFT")  # DRAFT / PUBLISHED / ACTIVE
 
     players = models.ManyToManyField(
         "accounts.User",
@@ -44,9 +44,9 @@ class TrainingPlan(models.Model):
 
 
 class TrainingSession(models.Model):
-    SESSION_TYPE_GROUP = "group"
-    SESSION_TYPE_TEAM = "team"
-    SESSION_TYPE_INDIVIDUAL = "individual"
+    SESSION_TYPE_GROUP = "GROUP"
+    SESSION_TYPE_TEAM = "TEAM"
+    SESSION_TYPE_INDIVIDUAL = "INDIVIDUAL"
     SESSION_TYPE_CHOICES = [
         (SESSION_TYPE_GROUP, "Group"),
         (SESSION_TYPE_TEAM, "Team"),
@@ -102,16 +102,16 @@ class TrainingPlanPlayer(models.Model):
 
 class PlayerSessionProgress(models.Model):
     STATUS_CHOICES = [
-        ("not_started", "Not Started"),
-        ("in_progress", "In Progress"),
-        ("completed", "Completed"),
+        ("NOT_STARTED", "Not Started"),
+        ("IN_PROGRESS", "In Progress"),
+        ("COMPLETED",   "Completed"),
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     player = models.ForeignKey("accounts.User", on_delete=models.CASCADE, related_name="session_progress")
     session = models.ForeignKey("training.TrainingSession", on_delete=models.CASCADE, related_name="player_progress")
 
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="not_started")
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="NOT_STARTED")
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
@@ -119,9 +119,9 @@ class PlayerSessionProgress(models.Model):
 
 
 class SessionLifecycle(models.Model):
-    NOT_STARTED = "not_started"
-    IN_PROGRESS = "in_progress"
-    COMPLETED   = "completed"
+    NOT_STARTED = "NOT_STARTED"
+    IN_PROGRESS = "IN_PROGRESS"
+    COMPLETED   = "COMPLETED"
     STATUS_CHOICES = [
         (NOT_STARTED, "Not Started"),
         (IN_PROGRESS, "In Progress"),
@@ -152,8 +152,8 @@ class SessionLifecycle(models.Model):
 
 
 class SessionAttendance(models.Model):
-    PRESENT = "present"
-    LATE    = "late"
+    PRESENT = "PRESENT"
+    LATE    = "LATE"
     STATUS_CHOICES = [
         (PRESENT, "Present"),
         (LATE,    "Late"),

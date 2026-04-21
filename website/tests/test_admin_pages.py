@@ -41,7 +41,7 @@ class AdminCoachRequestsPageTests(TestCase):
         PlayerProfile.objects.create(
             user=self.player_user,
             coach=self.approved_user,
-            login_status="complete",
+            login_status="COMPLETE",
         )
 
     def test_staff_page_redirects_unauthenticated_users_to_login(self):

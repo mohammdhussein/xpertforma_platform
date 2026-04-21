@@ -1,8 +1,9 @@
 from rest_framework import serializers
 
+from accounts.exceptions import InvalidInputError
 from accounts.serializers.position import PositionSummarySerializer
 from training.models import TrainingPlan, TrainingSession
-from training.statuses import parse_training_session_type_api_value
+from training.statuses import VALID_TRAINING_SESSION_TYPES, parse_training_session_type_api_value
 from xpertforma_platform.api_fields import UppercaseTokenField
 from xpertforma_platform.api_values import normalize_api_value
 
@@ -43,12 +44,20 @@ class SessionCreateSerializer(serializers.Serializer):
     notes = serializers.CharField(required=False, allow_blank=True)
 
     def validate_session_type(self, value):
+        expected_session_types = sorted(VALID_TRAINING_SESSION_TYPES)
+
         if value != normalize_api_value(value):
-            raise serializers.ValidationError("Use uppercase values.")
+            raise InvalidInputError(
+                "Invalid session_type. Use uppercase values.",
+                expected=expected_session_types,
+            )
 
         parsed = parse_training_session_type_api_value(value)
         if parsed is None:
-            raise serializers.ValidationError("Invalid session_type.")
+            raise InvalidInputError(
+                "Invalid session_type.",
+                expected=expected_session_types,
+            )
 
         return parsed
 

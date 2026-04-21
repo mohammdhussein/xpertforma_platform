@@ -6,10 +6,10 @@ from xpertforma_platform.api_values import normalize_api_value
 # ── Checkin ──────────────────────────────────────────────────────────────────
 
 class SleepQuality(models.TextChoices):
-    POOR  = "poor",  "Poor"
-    FAIR  = "fair",  "Fair"
-    GOOD  = "good",  "Good"
-    GREAT = "great", "Great"
+    POOR  = "POOR",  "Poor"
+    FAIR  = "FAIR",  "Fair"
+    GOOD  = "GOOD",  "Good"
+    GREAT = "GREAT", "Great"
 
 
 SLEEP_QUALITY_SCORE = {
@@ -29,70 +29,60 @@ VALID_SORE_ZONES = [
 # ── Training session ─────────────────────────────────────────────────────────
 
 class Intensity(models.TextChoices):
-    LOW    = "low",    "Low"
-    MEDIUM = "medium", "Medium"
-    HIGH   = "high",   "High"
+    LOW    = "LOW",    "Low"
+    MEDIUM = "MEDIUM", "Medium"
+    HIGH   = "HIGH",   "High"
+
+
+VALID_TRAINING_SESSION_TYPES = {"GROUP", "TEAM", "INDIVIDUAL"}
 
 
 # ── AI insights ──────────────────────────────────────────────────────────────
 
 class InsightTag(models.TextChoices):
-    LOAD      = "load",      "Load"
-    INTENSITY = "intensity", "Intensity"
-    RECOVERY  = "recovery",  "Recovery"
+    LOAD      = "LOAD",      "Load"
+    INTENSITY = "INTENSITY", "Intensity"
+    RECOVERY  = "RECOVERY",  "Recovery"
 
 
 # ── Player session status ─────────────────────────────────────────────────────
 
-CANONICAL_COMPLETED_PLAYER_SESSION_STATUS = "completed"
-COMPLETED_PLAYER_SESSION_STATUSES = {"complete", CANONICAL_COMPLETED_PLAYER_SESSION_STATUS}
+PLAYER_SESSION_STATUS_NOT_STARTED = "NOT_STARTED"
+PLAYER_SESSION_STATUS_IN_PROGRESS = "IN_PROGRESS"
+PLAYER_SESSION_STATUS_COMPLETED   = "COMPLETED"
+
 VALID_PLAYER_SESSION_STATUSES = {
-    "not_started",
-    "in_progress",
-    *COMPLETED_PLAYER_SESSION_STATUSES,
-}
-PLAYER_SESSION_STATUS_API_TO_DB = {
-    "NOT_STARTED": "not_started",
-    "IN_PROGRESS": "in_progress",
-    "COMPLETED":   CANONICAL_COMPLETED_PLAYER_SESSION_STATUS,
-}
-TRAINING_SESSION_TYPE_API_TO_DB = {
-    "GROUP":      "group",
-    "TEAM":       "team",
-    "INDIVIDUAL": "individual",
+    PLAYER_SESSION_STATUS_NOT_STARTED,
+    PLAYER_SESSION_STATUS_IN_PROGRESS,
+    PLAYER_SESSION_STATUS_COMPLETED,
 }
 
 
-def normalize_player_session_status(value, *, default="not_started"):
+def normalize_player_session_status(value, *, default=PLAYER_SESSION_STATUS_NOT_STARTED):
     if not value:
         return default
-    status = str(value).strip()
-    if status in COMPLETED_PLAYER_SESSION_STATUSES:
-        return CANONICAL_COMPLETED_PLAYER_SESSION_STATUS
-    return status
+    return normalize_api_value(value, default=default)
 
 
 def is_completed_player_session_status(value):
-    return normalize_player_session_status(value, default="") == CANONICAL_COMPLETED_PLAYER_SESSION_STATUS
+    return normalize_player_session_status(value, default="") == PLAYER_SESSION_STATUS_COMPLETED
 
 
-def to_api_player_session_status(value, *, default="NOT_STARTED"):
-    normalized = normalize_player_session_status(value, default="")
-    if not normalized:
-        return default
-    return normalize_api_value(normalized, default=default)
+def to_api_player_session_status(value, *, default=PLAYER_SESSION_STATUS_NOT_STARTED):
+    return normalize_player_session_status(value, default=default)
 
 
 def parse_player_session_status_api_value(value):
-    return PLAYER_SESSION_STATUS_API_TO_DB.get(normalize_api_value(value))
+    normalized = normalize_api_value(value)
+    return normalized if normalized in VALID_PLAYER_SESSION_STATUSES else None
 
 
 def derive_session_player_status_api_value(lifecycle_status, *, has_attendance):
-    if lifecycle_status == "completed":
+    if lifecycle_status == PLAYER_SESSION_STATUS_COMPLETED:
         return "COMPLETED" if has_attendance else "MISSED"
-    if lifecycle_status == "in_progress":
-        return "IN_PROGRESS"
-    return "NOT_STARTED"
+    if lifecycle_status == PLAYER_SESSION_STATUS_IN_PROGRESS:
+        return PLAYER_SESSION_STATUS_IN_PROGRESS
+    return PLAYER_SESSION_STATUS_NOT_STARTED
 
 
 def to_api_training_session_type(value, *, default=""):
@@ -100,7 +90,8 @@ def to_api_training_session_type(value, *, default=""):
 
 
 def parse_training_session_type_api_value(value):
-    return TRAINING_SESSION_TYPE_API_TO_DB.get(normalize_api_value(value))
+    normalized = normalize_api_value(value)
+    return normalized if normalized in VALID_TRAINING_SESSION_TYPES else None
 
 
 def to_api_training_plan_status(value, *, default=""):

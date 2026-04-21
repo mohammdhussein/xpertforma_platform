@@ -18,12 +18,21 @@ from accounts.services.password_setup import (
     get_valid_password_setup_token,
 )
 from accounts.statuses import (
+    COACH_APPROVAL_APPROVED,
+    COACH_APPROVAL_PENDING,
+    COACH_APPROVAL_REJECTED,
     PLAYER_LOGIN_STATUS_FIRST_LOGIN,
     is_pending_coach_approval_status,
     normalize_player_login_status,
     is_rejected_coach_approval_status,
     normalize_coach_approval_status,
 )
+
+
+COACH_STATUS_REJECTION_MESSAGES = {
+    COACH_APPROVAL_PENDING: "Coach account is pending approval.",
+    COACH_APPROVAL_REJECTED: "Coach account has been rejected.",
+}
 
 
 def _access_expires_at(access_token_str):
@@ -131,7 +140,16 @@ class LoginTokenOnlySerializer(TokenObtainPairSerializer):
             coach_profile = user.coach_profile
             register_status = normalize_coach_approval_status(coach_profile.approval_status)
             if is_pending_coach_approval_status(register_status) or is_rejected_coach_approval_status(register_status):
-                raise serializers.ValidationError({f"coach_status": {"register_status": f"{register_status}"}})
+                raise serializers.ValidationError({
+                    "coach_status": {
+                        "detail": COACH_STATUS_REJECTION_MESSAGES.get(
+                            register_status,
+                            "Coach account is not approved.",
+                        ),
+                        "expected": [COACH_APPROVAL_APPROVED],
+                        "register_status": register_status,
+                    }
+                })
 
             data["coach_status"] = {
                 "register_status": register_status,

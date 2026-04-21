@@ -109,18 +109,18 @@ class Position(models.Model):
 
 
 class PlayerProfile(models.Model):
-    FOOT_RIGHT = "right"
-    FOOT_LEFT = "left"
-    FOOT_BOTH = "both"
+    FOOT_RIGHT = "RIGHT"
+    FOOT_LEFT = "LEFT"
+    FOOT_BOTH = "BOTH"
     FOOT_CHOICES = [
         (FOOT_RIGHT, "Right"),
         (FOOT_LEFT, "Left"),
         (FOOT_BOTH, "Both"),
     ]
 
-    STATE_ACTIVE = "active"
-    STATE_INJURED = "injured"
-    STATE_NEEDS_REVIEW = "needs_review"
+    STATE_ACTIVE = "ACTIVE"
+    STATE_INJURED = "INJURED"
+    STATE_NEEDS_REVIEW = "NEEDS_REVIEW"
     STATE_CHOICES = [
         (STATE_ACTIVE, "Active"),
         (STATE_INJURED, "Injured"),
@@ -191,7 +191,7 @@ class ManagerProfile(models.Model):
 
 
 class PasswordSetupToken(models.Model):
-    PURPOSE_SET_PASSWORD = "set_password"
+    PURPOSE_SET_PASSWORD = "SET_PASSWORD"
     PURPOSE_CHOICES = (
         (PURPOSE_SET_PASSWORD, "Set Password"),
     )

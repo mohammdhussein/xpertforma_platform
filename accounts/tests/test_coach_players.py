@@ -112,14 +112,14 @@ class CoachPlayersListTests(TestCase):
             title="Speed & Agility Program",
             start_date=today - timedelta(days=5),
             end_date=today + timedelta(days=5),
-            status="draft",
+            status="DRAFT",
         )
         completed_plan = TrainingPlan.objects.create(
             creator=self.coach,
             title="Shooting Technique",
             start_date=today - timedelta(days=12),
             end_date=today - timedelta(days=9),
-            status="draft",
+            status="DRAFT",
         )
         TrainingPlanPlayer.objects.create(plan=active_plan, player=self.player_one, assigned_by=self.coach)
         TrainingPlanPlayer.objects.create(plan=completed_plan, player=self.player_one, assigned_by=self.coach)
@@ -168,22 +168,22 @@ class CoachPlayersListTests(TestCase):
         speed_progress = PlayerSessionProgress.objects.create(
             player=self.player_one,
             session=speed_session,
-            status="complete",
+            status="COMPLETED",
         )
         shooting_progress = PlayerSessionProgress.objects.create(
             player=self.player_one,
             session=shooting_session,
-            status="completed",
+            status="COMPLETED",
         )
         tactics_progress = PlayerSessionProgress.objects.create(
             player=self.player_one,
             session=tactics_session,
-            status="in_progress",
+            status="IN_PROGRESS",
         )
         completed_plan_progress = PlayerSessionProgress.objects.create(
             player=self.player_one,
             session=completed_plan_session,
-            status="complete",
+            status="COMPLETED",
         )
 
         PlayerSessionProgress.objects.filter(pk=speed_progress.pk).update(updated_at=now - timedelta(days=3))

@@ -100,7 +100,7 @@ class CoachCreatePlayerFlowTests(TestCase):
             user=player,
             coach=old_coach,
             position=self.right_winger,
-            login_status="complete",
+            login_status="COMPLETE",
             height_cm=174,
             weight_kg=67,
             foot=PlayerProfile.FOOT_RIGHT,
@@ -164,7 +164,7 @@ class CoachCreatePlayerFlowTests(TestCase):
             user=player,
             coach=old_coach,
             position=self.right_winger,
-            login_status="complete",
+            login_status="COMPLETE",
             height_cm=177,
             weight_kg=70,
             foot=PlayerProfile.FOOT_RIGHT,
@@ -206,7 +206,7 @@ class CoachCreatePlayerFlowTests(TestCase):
             user=player,
             coach=self.coach,
             position=self.striker,
-            login_status="complete",
+            login_status="COMPLETE",
         )
 
         response = self.client.post(

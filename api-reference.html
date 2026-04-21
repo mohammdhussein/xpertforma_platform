@@ -337,9 +337,15 @@
                     <h4>Response 400 (blocked coach)</h4>
                     <pre>{
   "coach_status": {
+    "detail": "Coach account is pending approval.",
+    "expected": ["APPROVED"],
     "register_status": "PENDING"
   }
 }</pre>
+                    <p>Rejected coaches receive the same shape with
+                        <code>detail</code> = "Coach account has been rejected." and
+                        <code>register_status</code> = <code>REJECTED</code>.
+                    </p>
                 </div>
                 <div class="card">
                     <h4>Expected Values</h4>
@@ -619,44 +625,95 @@
         </div>
 
         <div class="endpoint"
-             data-search="GET /api/coach/dashboard coach dashboard my_players position upcoming_sessions total_players sessions_this_week">
+             data-search="GET /api/coach/dashboard coach dashboard overview_stats alerts upcoming_sessions total_players attendance_week">
             <div><span class="badge get">GET</span><span class="path">/api/coach/dashboard/</span></div>
-            <p class="meta">Authenticated approved coach only. Dashboard summary with top 3 upcoming sessions. For
-                sessions on the current day, only sessions with a start time later than the dashboard local time are
-                included. The dashboard local time zone is controlled by <code>APP_LOCAL_TIME_ZONE</code> and defaults
-                to <code>Asia/Jerusalem</code>. <code>sessions_this_week</code> is counted in a Sunday-to-Saturday
-                window based on that same local date.</p>
+            <p class="meta">Authenticated approved coach only. Consolidated dashboard payload: overview stats with
+                deltas, derived alert cards (computed on-the-fly, no DB table), and upcoming sessions within the next
+                48 hours. The dashboard local time zone is controlled by <code>APP_LOCAL_TIME_ZONE</code> and defaults
+                to <code>Asia/Jerusalem</code>.</p>
             <div class="grid">
                 <div class="card">
                     <h4>Response 200</h4>
                     <pre>{
-  "stats": {
-    "total_players": 4,
-    "sessions_this_week": 7,
-    "sessions_this_month": 18
+  "overview_stats": {
+    "total_players": {
+      "value": 28,
+      "delta_value": 2
+    },
+    "sessions_today": {
+      "value": 3,
+      "completed_count": 0,
+      "next_start_time": "09:30",
+      "progress_percent": 0
+    },
+    "attendance_week": {
+      "value_percent": 87,
+      "delta_percent": 4
+    },
+    "attention": {
+      "value": 4,
+      "progress_percent": 14
+    }
   },
-  "my_players": [
+  "alerts": [
     {
-      "id": "uuid",
-      "name": "Player Name",
-      "position": {
-        "id": 12,
-        "name": "Striker",
-        "code": "ST"
+      "id": "INJURY_RISK:&lt;uuid&gt;:20260418",
+      "severity": "CRITICAL",
+      "alert_type": "INJURY_RISK",
+      "title": "Injury Risk — Player Name",
+      "description": "High fatigue index for 3 consecutive days. Rest recommended.",
+      "related_players": [
+        { "id": "uuid", "name": "Player Name", "avatar_url": null }
+      ],
+      "related_session": null,
+      "related_plan": null,
+      "occurred_at": "2026-04-18T09:12:00Z"
+    },
+    {
+      "id": "LOW_ATTENDANCE:&lt;uuid&gt;:20260417",
+      "severity": "WARNING",
+      "alert_type": "LOW_ATTENDANCE",
+      "title": "Low Attendance — Morning Drill",
+      "description": "5 of 12 expected players attended.",
+      "related_players": [],
+      "related_session": {
+        "session_id": "uuid",
+        "plan_id": "uuid",
+        "title": "Morning Drill",
+        "session_date": "2026-04-17",
+        "start_time": "08:00:00"
       },
-      "last_activity": "2026-04-02T14:00:00Z",
-      "avatar_url": "https://host/media/player_avatars/avatar.png"
+      "related_plan": null,
+      "occurred_at": "2026-04-17T10:00:00Z"
+    },
+    {
+      "id": "PLAN_UPDATED:&lt;uuid&gt;:20260418",
+      "severity": "INFO",
+      "alert_type": "PLAN_UPDATED",
+      "title": "Plan Updated — Pre-season Block",
+      "description": "A player was recently assigned to this plan by another user.",
+      "related_players": [],
+      "related_session": null,
+      "related_plan": { "plan_id": "uuid", "title": "Pre-season Block" },
+      "occurred_at": "2026-04-18T07:45:00Z"
     }
   ],
+  "alerts_total": 4,
   "upcoming_sessions": [
     {
       "session_id": "uuid",
       "plan_id": "uuid",
-      "title": "Strength Training",
-      "session_date": "2026-04-03",
-      "start_time": "16:00:00",
-      "session_type": "TEAM",
-      "players_count": 3
+      "title": "Morning Activation",
+      "session_date": "2026-04-18",
+      "start_time": "09:30:00",
+      "end_time": "11:00:00",
+      "location": "Main Pitch A",
+      "assigned_players": [
+        { "id": "uuid" },
+        { "id": "uuid" }
+      ],
+      "session_type": "GROUP",
+      "players_count": 14
     }
   ]
 }</pre>
@@ -664,15 +721,15 @@
                 <div class="card">
                     <h4>Expected Values</h4>
                     <ul>
-                        <li><code>stats.*</code>: non-negative integers.</li>
-                        <li><code>my_players[]</code>: player objects with <code>position</code> and
-                            <code>avatar_url</code>.
-                        </li>
-                        <li><code>upcoming_sessions[].session_type</code>: <code>GROUP</code>, <code>TEAM</code>, or
-                            <code>INDIVIDUAL</code>.
-                        </li>
-                        <li><code>upcoming_sessions[].start_time</code>: <code>HH:MM:SS</code> or <code>null</code>.
-                        </li>
+                        <li><code>overview_stats.total_players.delta_value</code>: ACTIVE players added this calendar month.</li>
+                        <li><code>overview_stats.attendance_week.*_percent</code>: integer 0–100 or <code>null</code> when no sessions exist.</li>
+                        <li><code>overview_stats.attention.value</code>: count of CRITICAL alerts.</li>
+                        <li><code>alerts[]</code>: top 3, ordered CRITICAL → WARNING → INFO then newest-first. Full count in <code>alerts_total</code>.</li>
+                        <li><code>alerts[].severity</code> / <code>alert_type</code>: <code>CRITICAL</code>, <code>WARNING</code>, or <code>INFO</code>.</li>
+                        <li><code>upcoming_sessions[]</code>: sessions with a <code>start_time</code> in the next 48 h, limit 3.</li>
+                        <li><code>upcoming_sessions[].session_type</code>: <code>GROUP</code>, <code>TEAM</code>, or <code>INDIVIDUAL</code>.</li>
+                        <li><code>upcoming_sessions[].end_time</code>: <code>HH:MM:SS</code> or <code>null</code>.</li>
+                        <li><code>upcoming_sessions[].assigned_players</code>: coach's players assigned to the plan.</li>
                     </ul>
                 </div>
             </div>
@@ -1039,6 +1096,12 @@
                         <li><code>400</code> if <code>assignee_players</code> is missing or empty</li>
                         <li><code>400</code> if any assigned player does not belong to the signed-in coach</li>
                     </ul>
+                    <p>Invalid <code>session_type</code> includes the accepted values in <code>expected</code>:</p>
+                    <pre>HTTP 400
+{
+  "detail": "Invalid session_type. Use uppercase values.",
+  "expected": ["GROUP", "INDIVIDUAL", "TEAM"]
+}</pre>
                 </div>
                 <div class="card">
                     <h4>Expected Values</h4>
@@ -1262,7 +1325,7 @@ HTTP 409   { "detail": "Session must be in progress to be ended." }</pre>
     "score": 74,
     "label": "Good to train",
     "sleep_hours": 6.5,
-    "sleep_quality": "fair",
+    "sleep_quality": "FAIR",
     "mood": 3,
     "sore_zones": ["left_quad", "upper_back"],
     "submitted_today": true
@@ -1274,7 +1337,7 @@ HTTP 409   { "detail": "Session must be in progress to be ended." }</pre>
       "session_date": "2026-04-16",
       "start_time": "18:00:00",
       "end_time": "19:30:00",
-      "intensity": "high",
+      "intensity": "HIGH",
       "location": "Main Pitch A",
       "squad_size": 22,
       "coach_note": "Pressing from the front..."
@@ -1296,7 +1359,7 @@ HTTP 409   { "detail": "Session must be in progress to be ended." }</pre>
   },
   "ai_insights": [
     {
-      "tag": "load",
+      "tag": "LOAD",
       "text": "You've covered 12% more distance this week."
     }
   ]
@@ -1324,7 +1387,7 @@ HTTP 409   { "detail": "Session must be in progress to be ended." }</pre>
                         <li><code>upcoming_sessions</code>: next 3 sessions from today onwards, ordered by date then
                             start time.
                         </li>
-                        <li><code>upcoming_sessions[].intensity</code>: <code>low</code> | <code>medium</code> | <code>high</code>.
+                        <li><code>upcoming_sessions[].intensity</code>: <code>LOW</code> | <code>MEDIUM</code> | <code>HIGH</code>.
                         </li>
                         <li><code>weekly_progress.load_status</code>: ratio <code>&lt;1.3</code> → <code>safe</code>,
                             <code>&lt;1.5</code> → <code>caution</code>, <code>&gt;=1.5</code> → <code>danger</code>.
@@ -1333,8 +1396,8 @@ HTTP 409   { "detail": "Session must be in progress to be ended." }</pre>
                             data.
                         </li>
                         <li><code>weekly_progress.load_ratio</code>: <code>null</code> when chronic load is 0.</li>
-                        <li><code>ai_insights[].tag</code>: <code>load</code> | <code>intensity</code> |
-                            <code>recovery</code>.
+                        <li><code>ai_insights[].tag</code>: <code>LOAD</code> | <code>INTENSITY</code> |
+                            <code>RECOVERY</code>.
                         </li>
                         <li>All decimal fields are serialized as floats (not strings).</li>
                     </ul>
@@ -1392,6 +1455,12 @@ HTTP 409   { "detail": "Session must be in progress to be ended." }</pre>
                             <code>fitness_level</code> are sent
                         </li>
                     </ul>
+                    <p>Invalid <code>foot</code> includes the accepted values in <code>expected</code>:</p>
+                    <pre>HTTP 400
+{
+  "detail": "Invalid foot value. Use uppercase values.",
+  "expected": ["BOTH", "LEFT", "RIGHT"]
+}</pre>
                 </div>
                 <div class="card">
                     <h4>Expected Values</h4>
@@ -1595,7 +1664,7 @@ HTTP 400
     "player_id": "uuid",
     "date": "2026-04-16",
     "sleep_hours": "7.50",
-    "sleep_quality": "good",
+    "sleep_quality": "GOOD",
     "mood": 4,
     "sore_zones": ["knee"],
     "readiness_score": 82,
@@ -1616,7 +1685,7 @@ HTTP 400
                     <h4>Request Body</h4>
                     <pre>{
   "sleep_hours": 7.5,
-  "sleep_quality": "good",
+  "sleep_quality": "GOOD",
   "mood": 4,
   "sore_zones": ["knee"]
 }</pre>
@@ -1628,7 +1697,7 @@ HTTP 400
   "player_id": "uuid",
   "date": "2026-04-16",
   "sleep_hours": "7.50",
-  "sleep_quality": "good",
+  "sleep_quality": "GOOD",
   "mood": 4,
   "sore_zones": ["knee"],
   "readiness_score": 82,
@@ -1639,8 +1708,8 @@ HTTP 400
                     <h4>Expected Values</h4>
                     <ul>
                         <li><code>sleep_hours</code>: decimal 0–24.</li>
-                        <li><code>sleep_quality</code>: one of <code>poor</code>, <code>fair</code>, <code>good</code>,
-                            <code>great</code>.
+                        <li><code>sleep_quality</code>: one of <code>POOR</code>, <code>FAIR</code>, <code>GOOD</code>,
+                            <code>GREAT</code>.
                         </li>
                         <li><code>mood</code>: integer 1–5.</li>
                         <li><code>sore_zones</code>: array of zone strings (may be empty). Valid values:
@@ -1658,6 +1727,18 @@ HTTP 400
                         <li><code>400</code>: validation error (invalid field values).</li>
                         <li><code>409</code>: check-in already submitted for today.</li>
                     </ul>
+                    <p>Invalid <code>sleep_quality</code> includes the accepted values in <code>expected</code>:</p>
+                    <pre>HTTP 400
+{
+  "detail": "Invalid sleep_quality.",
+  "expected": ["POOR", "FAIR", "GOOD", "GREAT"]
+}</pre>
+                    <p>Invalid <code>sore_zones</code> includes the accepted zones in <code>expected</code>:</p>
+                    <pre>HTTP 400
+{
+  "detail": "Invalid sore_zones value.",
+  "expected": ["head_neck", "shoulders", "upper_back", "lower_back", "hip_groin", "left_quad", "right_quad", "hamstring", "knee", "calf", "ankle_foot"]
+}</pre>
                 </div>
             </div>
         </div>
@@ -1672,7 +1753,7 @@ HTTP 400
                     <h4>Request Body</h4>
                     <pre>{
   "sleep_hours": 8,
-  "sleep_quality": "great",
+  "sleep_quality": "GREAT",
   "mood": 5,
   "sore_zones": []
 }</pre>
@@ -1684,7 +1765,7 @@ HTTP 400
   "player_id": "uuid",
   "date": "2026-04-16",
   "sleep_hours": "8.00",
-  "sleep_quality": "great",
+  "sleep_quality": "GREAT",
   "mood": 5,
   "sore_zones": [],
   "readiness_score": 100,
@@ -1696,8 +1777,8 @@ HTTP 400
                     <ul>
                         <li>All fields are required; the full check-in is replaced.</li>
                         <li><code>sleep_hours</code>: decimal 0–24.</li>
-                        <li><code>sleep_quality</code>: one of <code>poor</code>, <code>fair</code>, <code>good</code>,
-                            <code>great</code>.
+                        <li><code>sleep_quality</code>: one of <code>POOR</code>, <code>FAIR</code>, <code>GOOD</code>,
+                            <code>GREAT</code>.
                         </li>
                         <li><code>mood</code>: integer 1–5.</li>
                         <li><code>sore_zones</code>: array of zone strings (may be empty). Valid values:
@@ -1715,6 +1796,18 @@ HTTP 400
                         <li><code>400</code>: validation error (invalid field values).</li>
                         <li><code>404</code>: no check-in submitted for today.</li>
                     </ul>
+                    <p>Invalid <code>sleep_quality</code> includes the accepted values in <code>expected</code>:</p>
+                    <pre>HTTP 400
+{
+  "detail": "Invalid sleep_quality.",
+  "expected": ["POOR", "FAIR", "GOOD", "GREAT"]
+}</pre>
+                    <p>Invalid <code>sore_zones</code> includes the accepted zones in <code>expected</code>:</p>
+                    <pre>HTTP 400
+{
+  "detail": "Invalid sore_zones value.",
+  "expected": ["head_neck", "shoulders", "upper_back", "lower_back", "hip_groin", "left_quad", "right_quad", "hamstring", "knee", "calf", "ankle_foot"]
+}</pre>
                 </div>
             </div>
         </div>

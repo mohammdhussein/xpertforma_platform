@@ -26,7 +26,7 @@ def make_player(email="checkinplayer@example.com"):
     user = User.objects.create_user(email=email, password="StrongPass123!", name="Checkin Player")
     UserRole.objects.create(user=user, role=player_role)
     striker = Position.objects.get(code="ST")
-    PlayerProfile.objects.create(user=user, position=striker, login_status="complete")
+    PlayerProfile.objects.create(user=user, position=striker, login_status="COMPLETE")
     return user
 
 

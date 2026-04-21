@@ -1,11 +1,13 @@
 from rest_framework import serializers
 
+from accounts.exceptions import InvalidInputError
 from accounts.files import build_media_value_url
 from accounts.models import PlayerProfile
 from accounts.serializers.position import PositionSummarySerializer, build_position_payload
 from accounts.statuses import (
     PLAYER_LOGIN_STATUS_COMPLETE,
     PLAYER_LOGIN_STATUS_FIRST_LOGIN,
+    VALID_PLAYER_FOOT_VALUES,
     normalize_player_login_status,
     normalize_player_foot_status,
     parse_player_foot_api_value,
@@ -71,12 +73,20 @@ class PlayerProfileUpdateSerializer(serializers.Serializer):
         if value is None:
             return None
 
+        expected_foot_values = sorted(VALID_PLAYER_FOOT_VALUES)
+
         if value != normalize_player_foot_status(value):
-            raise serializers.ValidationError("Use uppercase values.")
+            raise InvalidInputError(
+                "Invalid foot value. Use uppercase values.",
+                expected=expected_foot_values,
+            )
 
         parsed = parse_player_foot_api_value(value)
         if parsed is None:
-            raise serializers.ValidationError("Invalid foot value.")
+            raise InvalidInputError(
+                "Invalid foot value.",
+                expected=expected_foot_values,
+            )
 
         return parsed
 

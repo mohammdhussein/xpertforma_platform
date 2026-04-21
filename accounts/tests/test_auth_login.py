@@ -18,7 +18,7 @@ class LoginEndpointTests(TestCase):
             name="Pending Coach",
         )
         UserRole.objects.create(user=coach, role=self.coach_role)
-        CoachProfile.objects.create(user=coach, approval_status="pending")
+        CoachProfile.objects.create(user=coach, approval_status="PENDING")
 
         response = self.client.post(
             "/api/auth/login/",
@@ -27,7 +27,16 @@ class LoginEndpointTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.data, {"coach_status": {"register_status": "PENDING"}})
+        self.assertEqual(
+            response.data,
+            {
+                "coach_status": {
+                    "detail": "Coach account is pending approval.",
+                    "expected": ["APPROVED"],
+                    "register_status": "PENDING",
+                }
+            },
+        )
 
     def test_player_login_returns_uppercase_login_status(self):
         player = User.objects.create_user(
@@ -39,7 +48,7 @@ class LoginEndpointTests(TestCase):
         PlayerProfile.objects.create(
             user=player,
             position=self.striker,
-            login_status="complete",
+            login_status="COMPLETE",
         )
 
         response = self.client.post(
@@ -67,7 +76,7 @@ class LoginEndpointTests(TestCase):
         PlayerProfile.objects.create(
             user=player,
             position=self.striker,
-            login_status="complete",
+            login_status="COMPLETE",
         )
 
         login_response = self.client.post(

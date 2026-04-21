@@ -26,7 +26,7 @@ def _make_player(email="countsplayer@example.com", *, with_profile=True):
     UserRole.objects.create(user=user, role=player_role)
     if with_profile:
         striker = Position.objects.get(code="ST")
-        PlayerProfile.objects.create(user=user, position=striker, login_status="complete")
+        PlayerProfile.objects.create(user=user, position=striker, login_status="COMPLETE")
     return user
 
 
@@ -50,7 +50,7 @@ class PlayerSessionsCountTests(TestCase):
             title="Speed Plan",
             start_date=date(2024, 1, 1),
             end_date=date(2024, 1, 31),
-            status="draft",
+            status="DRAFT",
         )
         TrainingPlanPlayer.objects.create(plan=self.plan, player=self.player, assigned_by=self.player)
 
@@ -158,7 +158,7 @@ class PlayerSessionsCountTests(TestCase):
             title="Other Plan",
             start_date=date(2024, 1, 1),
             end_date=date(2024, 1, 31),
-            status="draft",
+            status="DRAFT",
         )
         TrainingPlanPlayer.objects.create(plan=other_plan, player=other_player, assigned_by=other_player)
         TrainingSession.objects.create(

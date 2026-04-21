@@ -18,7 +18,7 @@ class PasswordSetupTokenServiceTests(TestCase):
         )
         player_role, _ = Role.objects.get_or_create(role_name="Player")
         UserRole.objects.create(user=self.player, role=player_role)
-        PlayerProfile.objects.create(user=self.player, login_status="first_login")
+        PlayerProfile.objects.create(user=self.player, login_status="FIRST_LOGIN")
 
     def test_token_creation_invalidates_previous_unused_tokens(self):
         first_record, first_raw_token = create_password_setup_token(self.player)
@@ -45,7 +45,7 @@ class CompleteSetPasswordTests(TestCase):
         )
         player_role, _ = Role.objects.get_or_create(role_name="Player")
         UserRole.objects.create(user=self.player, role=player_role)
-        PlayerProfile.objects.create(user=self.player, login_status="first_login")
+        PlayerProfile.objects.create(user=self.player, login_status="FIRST_LOGIN")
 
     def test_player_can_set_password_with_valid_token(self):
         token_record, raw_token = create_password_setup_token(self.player)
@@ -63,7 +63,7 @@ class CompleteSetPasswordTests(TestCase):
         self.player.refresh_from_db()
         token_record.refresh_from_db()
         self.assertTrue(self.player.check_password("NewStrongPass123!"))
-        self.assertEqual(self.player.player_profile.login_status, "first_login")
+        self.assertEqual(self.player.player_profile.login_status, "FIRST_LOGIN")
         self.assertIsNone(self.player.date_of_birth)
         self.assertIsNone(self.player.phone)
         self.assertIsNone(self.player.player_profile.position)
