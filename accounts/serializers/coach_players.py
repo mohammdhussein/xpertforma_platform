@@ -92,6 +92,8 @@ class PlayerCardSerializer(serializers.Serializer):
     name = serializers.CharField()
     position = PositionSummarySerializer()
     state = UppercaseTokenField()
+    needs_attention = serializers.BooleanField()
+    expected_return_date = serializers.DateField(allow_null=True)
     avatar_url = serializers.CharField(allow_null=True)
 
 
@@ -109,6 +111,9 @@ class CoachPlayerDetailPlayerSerializer(serializers.Serializer):
     heightCm = serializers.FloatField(allow_null=True)
     weightKg = serializers.FloatField(allow_null=True)
     foot = UppercaseTokenField(allow_null=True)
+    state = UppercaseTokenField()
+    expectedReturnDate = serializers.DateField(allow_null=True)
+    needsAttention = serializers.BooleanField()
 
 
 class CoachPlayerNeedsAttentionSerializer(serializers.Serializer):

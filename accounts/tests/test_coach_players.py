@@ -47,6 +47,7 @@ class CoachPlayersListTests(TestCase):
             weight_kg=78,
             foot=PlayerProfile.FOOT_RIGHT,
             state=PlayerProfile.STATE_INJURED,
+            expected_return_date=date(2026, 5, 1),
             avatar="player_avatars/alpha.png",
         )
 
@@ -60,7 +61,7 @@ class CoachPlayersListTests(TestCase):
             user=self.player_two,
             coach=self.coach,
             position=self.central_midfielder,
-            state=PlayerProfile.STATE_NEEDS_REVIEW,
+            state=PlayerProfile.STATE_ACTIVE,
         )
 
         self.client.force_authenticate(user=self.coach)
@@ -82,26 +83,29 @@ class CoachPlayersListTests(TestCase):
                     "code": self.striker.code,
                 },
                 "state": "INJURED",
+                "needs_attention": True,
+                "expected_return_date": "2026-05-01",
                 "avatar_url": "/media/player_avatars/alpha.png",
             },
         )
 
     def test_players_endpoint_filters_by_state_tab(self):
-        response = self.client.get("/api/coach/players/?tab=NEEDS_REVIEW")
+        response = self.client.get("/api/coach/players/?tab=NEEDS_ATTENTION")
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(len(response.data["players"]), 1)
-        self.assertEqual(response.data["players"][0]["id"], str(self.player_two.id))
-        self.assertEqual(response.data["players"][0]["state"], "NEEDS_REVIEW")
+        self.assertEqual(response.data["players"][0]["id"], str(self.player_one.id))
+        self.assertEqual(response.data["players"][0]["state"], "INJURED")
+        self.assertTrue(response.data["players"][0]["needs_attention"])
 
     def test_players_endpoint_rejects_lowercase_state_tab(self):
-        response = self.client.get("/api/coach/players/?tab=needs_review")
+        response = self.client.get("/api/coach/players/?tab=needs_attention")
 
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.data["detail"], "Invalid tab. Use uppercase values.")
         self.assertEqual(
             list(response.data["expected"]),
-            ["ALL", "ACTIVE", "INJURED", "NEEDS_REVIEW"],
+            ["ALL", "ACTIVE", "INJURED", "NEEDS_ATTENTION"],
         )
 
     def test_player_profile_endpoint_returns_computed_overview_payload(self):
@@ -227,6 +231,9 @@ class CoachPlayersListTests(TestCase):
                 "heightCm": 185.0,
                 "weightKg": 78.0,
                 "foot": "RIGHT",
+                "state": "INJURED",
+                "expectedReturnDate": "2026-05-01",
+                "needsAttention": True,
             },
         )
         self.assertEqual(
@@ -241,6 +248,11 @@ class CoachPlayersListTests(TestCase):
         self.assertEqual(
             response.data["overview"]["needsAttention"],
             [
+                {
+                    "id": "player_injured",
+                    "message": "Player is currently marked as injured. Expected return date: 2026-05-01.",
+                    "severity": "CRITICAL",
+                },
                 {
                     "id": "missed_last_session",
                     "message": "Missed last training session",
@@ -340,6 +352,9 @@ class CoachPlayersListTests(TestCase):
                 "heightCm": None,
                 "weightKg": None,
                 "foot": None,
+                "state": "ACTIVE",
+                "expectedReturnDate": None,
+                "needsAttention": False,
             },
         )
         self.assertEqual(response.data["overview"]["needsAttention"], [])

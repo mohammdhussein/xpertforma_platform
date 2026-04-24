@@ -120,11 +120,9 @@ class PlayerProfile(models.Model):
 
     STATE_ACTIVE = "ACTIVE"
     STATE_INJURED = "INJURED"
-    STATE_NEEDS_REVIEW = "NEEDS_REVIEW"
     STATE_CHOICES = [
         (STATE_ACTIVE, "Active"),
         (STATE_INJURED, "Injured"),
-        (STATE_NEEDS_REVIEW, "Needs Review"),
     ]
 
     user = models.OneToOneField("accounts.User", on_delete=models.CASCADE, primary_key=True,
@@ -143,6 +141,7 @@ class PlayerProfile(models.Model):
     weight_kg = models.FloatField(null=True, blank=True)
     foot = models.CharField(max_length=10, choices=FOOT_CHOICES, null=True, blank=True)
     state = models.CharField(max_length=20, choices=STATE_CHOICES, default=STATE_ACTIVE)
+    expected_return_date = models.DateField(null=True, blank=True)
     position = models.ForeignKey("accounts.Position", on_delete=models.SET_NULL, null=True, blank=True,
                                  related_name="player_profiles")
     fitness_level = models.CharField(max_length=40, blank=True)

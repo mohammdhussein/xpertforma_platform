@@ -1,8 +1,10 @@
+from django.utils import timezone
 from django.db.models import Q
 
 from accounts.exceptions import InvalidInputError
 from accounts.files import build_media_value_url
 from accounts.models import PlayerProfile
+from accounts.services.coach_player_attention import build_coach_player_attention_summary
 from accounts.serializers.position import build_position_payload
 from accounts.statuses import (
     VALID_PLAYER_STATE_VALUES,
@@ -12,7 +14,8 @@ from accounts.statuses import (
 from xpertforma_platform.api_values import normalize_api_value
 
 
-VALID_COACH_PLAYERS_TAB_VALUES = ["ALL", *sorted(VALID_PLAYER_STATE_VALUES)]
+NEEDS_ATTENTION_TAB = "NEEDS_ATTENTION"
+VALID_COACH_PLAYERS_TAB_VALUES = ["ALL", *sorted(VALID_PLAYER_STATE_VALUES), NEEDS_ATTENTION_TAB]
 
 
 def get_coach_players_queryset(coach_user):
@@ -38,7 +41,9 @@ def build_coach_players_list_payload(coach_user, *, query="", tab="all"):
             expected=VALID_COACH_PLAYERS_TAB_VALUES,
         )
 
-    if normalized_tab != "ALL":
+    if normalized_tab == NEEDS_ATTENTION_TAB:
+        pass
+    elif normalized_tab != "ALL":
         db_state = parse_player_state_api_value(normalized_tab)
         if db_state is None:
             raise InvalidInputError(
@@ -48,13 +53,19 @@ def build_coach_players_list_payload(coach_user, *, query="", tab="all"):
         queryset = queryset.filter(state=db_state)
 
     players = []
+    current_now = timezone.now()
     for profile in queryset.order_by("user__first_name", "user__last_name", "user__email"):
+        attention_summary = build_coach_player_attention_summary(profile, now=current_now)
+        if normalized_tab == NEEDS_ATTENTION_TAB and not attention_summary["needs_attention"]:
+            continue
         players.append(
             {
                 "id": profile.user.id,
                 "name": profile.user.name,
                 "position": build_position_payload(profile.position),
                 "state": normalize_player_state(profile.state),
+                "needs_attention": attention_summary["needs_attention"],
+                "expected_return_date": profile.expected_return_date,
                 "avatar_url": build_media_value_url(profile.avatar),
                 "last_activity": profile.user.last_seen_at,
             }

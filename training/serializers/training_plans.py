@@ -32,8 +32,35 @@ class TrainingPlanDetailSerializer(serializers.ModelSerializer):
         fields = ["plan_id", "title", "start_date", "end_date", "status", "total_sessions", "assigned_players_count"]
 
 
-class TrainingPlanListResponseSerializer(serializers.Serializer):
-    plans = TrainingPlanDetailSerializer(many=True)
+class CoachTrainingPlanRangeSessionSerializer(serializers.Serializer):
+    session_id = serializers.UUIDField()
+    title = serializers.CharField()
+    session_type = UppercaseTokenField()
+    session_date = serializers.DateField()
+    start_time = serializers.TimeField(allow_null=True)
+    end_time = serializers.TimeField(allow_null=True)
+    intensity = UppercaseTokenField(allow_blank=True, allow_null=True)
+    location = serializers.CharField(allow_blank=True)
+    squad_size = serializers.IntegerField(allow_null=True)
+    coach_note = serializers.CharField(allow_blank=True)
+    status = UppercaseTokenField()
+
+
+class CoachTrainingPlanRangePlanSerializer(serializers.Serializer):
+    plan_id = serializers.UUIDField()
+    title = serializers.CharField()
+    sessions = CoachTrainingPlanRangeSessionSerializer(many=True)
+
+
+class CoachTrainingPlanRangeDaySerializer(serializers.Serializer):
+    date = serializers.DateField()
+    plans = CoachTrainingPlanRangePlanSerializer(many=True)
+
+
+class CoachTrainingPlanRangeResponseSerializer(serializers.Serializer):
+    start_date = serializers.DateField()
+    end_date = serializers.DateField()
+    days = CoachTrainingPlanRangeDaySerializer(many=True)
 
 
 class SessionCreateSerializer(serializers.Serializer):
