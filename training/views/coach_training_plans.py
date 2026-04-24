@@ -3,13 +3,16 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from accounts.permissions import IsApprovedCoach
-from training.queries.training_plans import build_training_plan_screen_payload, get_coach_training_plans_queryset
+from training.queries.training_plans import (
+    build_coach_training_plans_payload,
+    build_training_plan_screen_payload,
+    get_coach_training_plans_queryset,
+)
 from training.serializers.training_plans import (
     PlanScreenResponseSerializer,
     TrainingPlanCreateResultSerializer,
     TrainingPlanCreateSerializer,
     TrainingPlanDetailSerializer,
-    TrainingPlanListResponseSerializer,
 )
 from training.services.coach_training_plans import create_coach_training_plan
 
@@ -27,8 +30,12 @@ class CoachTrainingPlanViewSet(viewsets.ModelViewSet):
         return TrainingPlanDetailSerializer
 
     def list(self, request, *args, **kwargs):
-        queryset = self.filter_queryset(self.get_queryset())
-        return Response(TrainingPlanListResponseSerializer({"plans": queryset}).data, status=status.HTTP_200_OK)
+        payload = build_coach_training_plans_payload(
+            request.user,
+            start_date_str=request.query_params.get("start_date"),
+            end_date_str=request.query_params.get("end_date"),
+        )
+        return Response(payload, status=status.HTTP_200_OK)
 
     def retrieve(self, request, *args, **kwargs):
         payload = build_training_plan_screen_payload(self.get_object(), request)

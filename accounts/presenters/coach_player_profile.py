@@ -2,7 +2,7 @@ from django.utils import timezone
 
 from accounts.files import build_media_value_url
 from accounts.serializers.position import build_position_payload
-from accounts.statuses import normalize_player_foot_status
+from accounts.statuses import normalize_player_foot_status, normalize_player_state
 from training.statuses import is_completed_player_session_status
 
 
@@ -55,56 +55,6 @@ def build_recent_activity(sessions, progress_map, *, limit=3):
             }
         )
     return recent_activity
-
-
-def build_needs_attention(
-    *,
-    latest_activity,
-    attendance_rate,
-    attendance_total,
-    progress_rate,
-    progress_total,
-    focus_area_name,
-    focus_area_trend,
-):
-    items = []
-    if latest_activity and latest_activity["status"] == "MISSED":
-        items.append(
-            {
-                "id": "missed_last_session",
-                "message": "Missed last training session",
-                "severity": "WARNING",
-            }
-        )
-
-    if attendance_total > 0 and attendance_rate < 70:
-        items.append(
-            {
-                "id": "low_attendance",
-                "message": "Low attendance in scheduled training",
-                "severity": "WARNING",
-            }
-        )
-
-    if progress_total > 0 and progress_rate < 50:
-        items.append(
-            {
-                "id": "low_progress",
-                "message": "Low overall progress across assigned plans",
-                "severity": "WARNING",
-            }
-        )
-
-    if focus_area_name and focus_area_trend == "DOWN":
-        items.append(
-            {
-                "id": "declining_focus_area",
-                "message": f"Recent performance is declining in {focus_area_name.lower()}",
-                "severity": "INFO",
-            }
-        )
-
-    return items[:3]
 
 
 def build_coach_insights(
@@ -200,7 +150,7 @@ def build_plan_payloads(plans, sessions_by_plan, progress_map, progress_row_map,
     return plans_out, plans_done
 
 
-def build_player_payload(player, player_profile):
+def build_player_payload(player, player_profile, *, needs_attention):
     return {
         "id": player.id,
         "name": player.name,
@@ -211,11 +161,15 @@ def build_player_payload(player, player_profile):
         "heightCm": player_profile.height_cm,
         "weightKg": player_profile.weight_kg,
         "foot": normalize_player_foot_status(player_profile.foot, default=None),
+        "state": normalize_player_state(player_profile.state),
+        "expectedReturnDate": player_profile.expected_return_date,
+        "needsAttention": needs_attention,
     }
 
 
 def build_overview_payload(
     *,
+    needs_attention_items,
     latest_activity,
     attendance_completed,
     attendance_rate,
@@ -229,15 +183,7 @@ def build_overview_payload(
     recent_activity,
 ):
     return {
-        "needsAttention": build_needs_attention(
-            latest_activity=latest_activity,
-            attendance_rate=attendance_rate,
-            attendance_total=attendance_total,
-            progress_rate=progress_rate,
-            progress_total=progress_total,
-            focus_area_name=focus_area_name,
-            focus_area_trend=focus_area_trend,
-        ),
+        "needsAttention": needs_attention_items,
         "keyMetrics": {
             "progressRate": {
                 "value": progress_rate,

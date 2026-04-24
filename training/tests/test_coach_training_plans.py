@@ -1,8 +1,10 @@
+from datetime import date, time
+
 from django.test import TestCase
 from rest_framework.test import APIClient
 
 from accounts.models import CoachProfile, PlayerProfile, Position, Role, User, UserRole
-from training.models import TrainingPlan, TrainingPlanPlayer, TrainingSession
+from training.models import SessionLifecycle, TrainingPlan, TrainingPlanPlayer, TrainingSession
 
 
 class CoachTrainingPlanValidationTests(TestCase):
@@ -55,7 +57,7 @@ class CoachTrainingPlanValidationTests(TestCase):
 
         self.client.force_authenticate(user=self.coach)
 
-    def test_list_returns_plans_wrapped_in_key(self):
+    def test_list_returns_range_payload_grouped_by_day_and_plan(self):
         plan = TrainingPlan.objects.create(
             creator=self.coach,
             title="Season Plan",
@@ -63,23 +65,173 @@ class CoachTrainingPlanValidationTests(TestCase):
             end_date="2026-04-05",
             status="DRAFT",
         )
-        TrainingSession.objects.create(
+        session = TrainingSession.objects.create(
             plan=plan,
             title="Session One",
             session_date="2026-04-01",
             session_type=TrainingSession.SESSION_TYPE_GROUP,
+            start_time=time(10, 0),
+            end_time=time(11, 0),
+            location="Main Field",
+            squad_size=18,
+            coach_note="High tempo",
         )
         TrainingPlanPlayer.objects.create(plan=plan, player=self.player, assigned_by=self.coach)
+        SessionLifecycle.objects.create(session=session, status=SessionLifecycle.COMPLETED)
+
+        response = self.client.get("/api/coach/plans/", {"start_date": "2026-04-01", "end_date": "2026-04-07"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["start_date"], "2026-04-01")
+        self.assertEqual(response.data["end_date"], "2026-04-07")
+        self.assertEqual(len(response.data["days"]), 1)
+        self.assertEqual(response.data["days"][0]["date"], "2026-04-01")
+        self.assertEqual(len(response.data["days"][0]["plans"]), 1)
+        self.assertEqual(response.data["days"][0]["plans"][0]["plan_id"], str(plan.plan_id))
+        self.assertEqual(response.data["days"][0]["plans"][0]["title"], "Season Plan")
+        self.assertEqual(len(response.data["days"][0]["plans"][0]["sessions"]), 1)
+        self.assertEqual(
+            response.data["days"][0]["plans"][0]["sessions"][0],
+            {
+                "session_id": str(session.session_id),
+                "title": "Session One",
+                "session_type": "GROUP",
+                "session_date": "2026-04-01",
+                "start_time": "10:00:00",
+                "end_time": "11:00:00",
+                "intensity": "MEDIUM",
+                "location": "Main Field",
+                "squad_size": 18,
+                "coach_note": "High tempo",
+                "status": "COMPLETED",
+            },
+        )
+
+    def test_list_defaults_to_today_when_dates_are_missing(self):
+        today = date.today()
+        today_plan = TrainingPlan.objects.create(
+            creator=self.coach,
+            title="Today Plan",
+            start_date=today,
+            end_date=today,
+            status="DRAFT",
+        )
+        future_plan = TrainingPlan.objects.create(
+            creator=self.coach,
+            title="Future Plan",
+            start_date="2026-05-10",
+            end_date="2026-05-15",
+            status="DRAFT",
+        )
+        TrainingSession.objects.create(
+            plan=today_plan,
+            title="Today Session",
+            session_date=today,
+            session_type=TrainingSession.SESSION_TYPE_GROUP,
+        )
+        TrainingSession.objects.create(
+            plan=future_plan,
+            title="Future Session",
+            session_date="2026-05-10",
+            session_type=TrainingSession.SESSION_TYPE_GROUP,
+        )
 
         response = self.client.get("/api/coach/plans/")
 
         self.assertEqual(response.status_code, 200)
-        self.assertIn("plans", response.data)
-        self.assertEqual(len(response.data["plans"]), 1)
-        self.assertEqual(response.data["plans"][0]["title"], "Season Plan")
-        self.assertEqual(response.data["plans"][0]["status"], "DRAFT")
-        self.assertEqual(response.data["plans"][0]["total_sessions"], 1)
-        self.assertEqual(response.data["plans"][0]["assigned_players_count"], 1)
+        self.assertEqual(response.data["start_date"], today.isoformat())
+        self.assertEqual(response.data["end_date"], today.isoformat())
+        self.assertEqual([day["date"] for day in response.data["days"]], [today.isoformat()])
+
+    def test_list_groups_plan_references_under_same_day(self):
+        first_plan = TrainingPlan.objects.create(
+            creator=self.coach,
+            title="Alpha Plan",
+            start_date="2026-04-01",
+            end_date="2026-04-05",
+            status="DRAFT",
+        )
+        second_plan = TrainingPlan.objects.create(
+            creator=self.coach,
+            title="Beta Plan",
+            start_date="2026-04-01",
+            end_date="2026-04-05",
+            status="DRAFT",
+        )
+        TrainingSession.objects.create(
+            plan=first_plan,
+            title="Morning Session",
+            session_date="2026-04-03",
+            session_type=TrainingSession.SESSION_TYPE_GROUP,
+            start_time="09:00",
+            end_time="10:00",
+        )
+        TrainingSession.objects.create(
+            plan=second_plan,
+            title="Evening Session",
+            session_date="2026-04-03",
+            session_type=TrainingSession.SESSION_TYPE_TEAM,
+            start_time="18:00",
+            end_time="19:00",
+        )
+
+        response = self.client.get("/api/coach/plans/", {"start_date": "2026-04-03", "end_date": "2026-04-07"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["days"][0]["date"], "2026-04-03")
+        self.assertEqual(
+            [plan["title"] for plan in response.data["days"][0]["plans"]],
+            ["Alpha Plan", "Beta Plan"],
+        )
+        self.assertEqual(
+            [plan["plan_id"] for plan in response.data["days"][0]["plans"]],
+            [str(first_plan.plan_id), str(second_plan.plan_id)],
+        )
+
+    def test_list_omits_days_without_sessions(self):
+        plan = TrainingPlan.objects.create(
+            creator=self.coach,
+            title="Sparse Plan",
+            start_date="2026-04-01",
+            end_date="2026-04-07",
+            status="DRAFT",
+        )
+        TrainingSession.objects.create(
+            plan=plan,
+            title="Day One",
+            session_date="2026-04-01",
+            session_type=TrainingSession.SESSION_TYPE_GROUP,
+        )
+        TrainingSession.objects.create(
+            plan=plan,
+            title="Day Three",
+            session_date="2026-04-03",
+            session_type=TrainingSession.SESSION_TYPE_GROUP,
+        )
+
+        response = self.client.get("/api/coach/plans/", {"start_date": "2026-04-01", "end_date": "2026-04-07"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual([day["date"] for day in response.data["days"]], ["2026-04-01", "2026-04-03"])
+
+    def test_list_rejects_invalid_start_date_format(self):
+        response = self.client.get("/api/coach/plans/", {"start_date": "bad", "end_date": "2026-04-07"})
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.data["detail"], "Invalid start_date format.")
+        self.assertEqual(list(response.data["expected"]), ["YYYY-MM-DD"])
+
+    def test_list_rejects_start_date_after_end_date(self):
+        response = self.client.get("/api/coach/plans/", {"start_date": "2026-04-07", "end_date": "2026-04-01"})
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.data["detail"], "start_date must be less than or equal to end_date.")
+
+    def test_list_rejects_range_longer_than_31_days(self):
+        response = self.client.get("/api/coach/plans/", {"start_date": "2026-01-01", "end_date": "2026-02-15"})
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.data["detail"], "Date range must not exceed 31 days.")
 
     def test_detail_returns_screen_shaped_response(self):
         plan = TrainingPlan.objects.create(

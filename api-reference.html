@@ -740,7 +740,7 @@
         <h2>Coach Players</h2>
 
         <div class="endpoint"
-             data-search="GET /api/coach/players coach players players position code state avatar_url q tab">
+             data-search="GET /api/coach/players coach players players position code state needs_attention expected_return_date avatar_url q tab">
             <div><span class="badge get">GET</span><span class="path">/api/coach/players/</span></div>
             <p class="meta">Authenticated coach only. Returns the signed-in coach players list.</p>
             <div class="grid">
@@ -748,7 +748,7 @@
                     <h4>Query Params</h4>
                     <ul>
                         <li><code>q</code>: search by player name, email, or position</li>
-                        <li><code>tab</code>: <code>ALL</code>, <code>ACTIVE</code>, <code>INJURED</code>, or <code>NEEDS_REVIEW</code>
+                        <li><code>tab</code>: <code>ALL</code>, <code>ACTIVE</code>, <code>INJURED</code>, or <code>NEEDS_ATTENTION</code>
                         </li>
                     </ul>
                 </div>
@@ -758,13 +758,15 @@
   "players": [
     {
       "id": "uuid",
-      "name": "Jordan Smith",
-      "position": {
-        "id": 12,
-        "name": "Striker",
-        "code": "ST"
-      },
-      "state": "ACTIVE",
+        "name": "Jordan Smith",
+        "position": {
+          "id": 12,
+          "name": "Striker",
+          "code": "ST"
+        },
+      "state": "INJURED",
+      "needs_attention": true,
+      "expected_return_date": "2026-05-01",
       "avatar_url": "/media/player_avatars/avatar.png"
     }
   ]
@@ -775,9 +777,13 @@
                     <ul>
                         <li><code>q</code>: optional search string.</li>
                         <li><code>tab</code>: uppercase only: <code>ALL</code>, <code>ACTIVE</code>,
-                            <code>INJURED</code>, <code>NEEDS_REVIEW</code>.
+                            <code>INJURED</code>, <code>NEEDS_ATTENTION</code>.
                         </li>
-                        <li><code>players[].state</code>: <code>ACTIVE</code>, <code>INJURED</code>, or <code>NEEDS_REVIEW</code>.
+                        <li><code>players[].state</code>: stored player state, either <code>ACTIVE</code> or <code>INJURED</code>.
+                        </li>
+                        <li><code>players[].needs_attention</code>: server-computed boolean. Injury also counts as needs attention.
+                        </li>
+                        <li><code>players[].expected_return_date</code>: <code>YYYY-MM-DD</code> or <code>null</code>.
                         </li>
                         <li><code>players[]</code>: player objects with <code>position</code> and
                             <code>avatar_url</code>.
@@ -790,14 +796,66 @@
                     <pre>HTTP 400
 {
   "detail": "Invalid tab. Use uppercase values.",
-  "expected": ["ALL", "ACTIVE", "INJURED", "NEEDS_REVIEW"]
+  "expected": ["ALL", "ACTIVE", "INJURED", "NEEDS_ATTENTION"]
 }</pre>
                 </div>
             </div>
         </div>
 
         <div class="endpoint"
-             data-search="GET /api/coach/players/player_id player overview stats plans dateOfBirth heightCm weightKg progressRate attendance coachInsights recentActivity performanceMetrics startTime endTime avatar_url">
+             data-search="PATCH /api/coach/players/player_id state injured active expected_return_date needs_attention">
+            <div><span class="badge patch">PATCH</span><span class="path">/api/coach/players/&lt;player_id&gt;/state/</span></div>
+            <p class="meta">Authenticated coach only. Updates the stored player state for one of the signed-in coach's players.</p>
+            <div class="grid">
+                <div class="card">
+                    <h4>Path Params</h4>
+                    <ul>
+                        <li><code>player_id</code>: player user UUID</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h4>Request Body</h4>
+                    <pre>{
+  "state": "INJURED",
+  "expected_return_date": "2026-05-01"
+}</pre>
+                </div>
+                <div class="card">
+                    <h4>Response 200</h4>
+                    <pre>{
+  "player_id": "uuid",
+  "state": "INJURED",
+  "expected_return_date": "2026-05-01",
+  "needs_attention": true
+}</pre>
+                </div>
+                <div class="card">
+                    <h4>Expected Values</h4>
+                    <ul>
+                        <li><code>state</code>: required uppercase token, either <code>ACTIVE</code> or <code>INJURED</code>.</li>
+                        <li><code>expected_return_date</code>: optional when <code>state=INJURED</code>, format <code>YYYY-MM-DD</code>.</li>
+                        <li>Sending <code>expected_return_date</code> with <code>state=ACTIVE</code> returns <code>400</code>.</li>
+                        <li>Setting <code>state=ACTIVE</code> clears the stored expected return date.</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h4>Error Responses</h4>
+                    <pre>HTTP 400
+{
+  "detail": "Invalid state. Use uppercase values.",
+  "expected": ["ACTIVE", "INJURED"]
+}</pre>
+                    <pre>HTTP 400
+{
+  "detail": "Invalid expected_return_date format.",
+  "expected": ["YYYY-MM-DD"]
+}</pre>
+                </div>
+            </div>
+        </div>
+
+        <div class="endpoint"
+             data-search="GET /api/coach/players/player_id player overview stats plans dateOfBirth heightCm weightKg progressRate attendance coachInsights recentActivity performanceMetrics startTime endTime avatar_url state expectedReturnDate needsAttention">
             <div><span class="badge get">GET</span><span class="path">/api/coach/players/&lt;player_id&gt;/</span></div>
             <p class="meta">Authenticated coach only. Returns the coach-facing player profile overview for one player
                 that belongs to the signed-in coach. The response is grouped into player info, overview, stats, and
@@ -821,14 +879,22 @@
       "name": "Striker",
       "code": "ST"
     },
-    "avatar_url": "/media/player_avatars/avatar.png",
-    "phone": "0501234567",
-    "heightCm": 185,
-    "weightKg": 78,
-    "foot": "RIGHT"
-  },
+      "avatar_url": "/media/player_avatars/avatar.png",
+      "phone": "0501234567",
+      "heightCm": 185,
+      "weightKg": 78,
+      "foot": "RIGHT",
+      "state": "INJURED",
+      "expectedReturnDate": "2026-05-01",
+      "needsAttention": true
+    },
   "overview": {
     "needsAttention": [
+      {
+        "id": "player_injured",
+        "message": "Player is currently marked as injured. Expected return date: 2026-05-01.",
+        "severity": "CRITICAL"
+      },
       {
         "id": "missed_last_session",
         "message": "Missed last training session",
@@ -917,10 +983,14 @@
                         <li><code>player.foot</code>: <code>RIGHT</code>, <code>LEFT</code>, <code>BOTH</code>, or
                             <code>null</code>.
                         </li>
+                        <li><code>player.state</code>: stored state, either <code>ACTIVE</code> or <code>INJURED</code>.</li>
+                        <li><code>player.expectedReturnDate</code>: <code>YYYY-MM-DD</code> or <code>null</code>.</li>
+                        <li><code>player.needsAttention</code>: computed boolean, derived from injury and training/performance rules.</li>
                         <li><code>overview.coachInsights</code>: ordered list of strings.</li>
                         <li><code>overview.recentActivity[].status</code>: <code>COMPLETED</code> or <code>MISSED</code>;
                             times use <code>HH:MM</code>.
                         </li>
+                        <li><code>overview.needsAttention[]</code>: up to 3 computed attention reasons, with injury shown first when present.</li>
                     </ul>
                 </div>
             </div>
@@ -930,22 +1000,48 @@
     <section class="section api-section" id="coach-plans">
         <h2>Coach Plans</h2>
 
-        <div class="endpoint" data-search="GET /api/coach/plans plans list total_sessions assigned_players_count">
+        <div class="endpoint"
+             data-search="GET /api/coach/plans coach training range start_date end_date days plans sessions session_type intensity status">
             <div><span class="badge get">GET</span><span class="path">/api/coach/plans/</span></div>
-            <p class="meta">Authenticated coach only. Returns the plans list for the signed-in coach.</p>
+            <p class="meta">Authenticated coach only. Returns the signed-in coach's training sessions for an inclusive date range, grouped per day and per plan. Only days with at least one session are returned.</p>
             <div class="grid">
+                <div class="card">
+                    <h4>Query Params</h4>
+                    <ul>
+                        <li><code>start_date</code>: optional, format <code>YYYY-MM-DD</code>. Defaults to today.</li>
+                        <li><code>end_date</code>: optional, format <code>YYYY-MM-DD</code>. Defaults to today.</li>
+                        <li>Range must satisfy <code>start_date &lt;= end_date</code> and span at most 31 days.</li>
+                    </ul>
+                </div>
                 <div class="card">
                     <h4>Response 200</h4>
                     <pre>{
-  "plans": [
+  "start_date": "2026-04-01",
+  "end_date": "2026-04-07",
+  "days": [
     {
-      "plan_id": "uuid",
-      "title": "Season Plan",
-      "start_date": "2026-04-01",
-      "end_date": "2026-04-05",
-      "status": "DRAFT",
-      "total_sessions": 5,
-      "assigned_players_count": 3
+      "date": "2026-04-01",
+      "plans": [
+        {
+          "plan_id": "uuid",
+          "title": "Speed Plan",
+          "sessions": [
+            {
+              "session_id": "uuid",
+              "title": "Warm-up",
+              "session_type": "GROUP",
+              "session_date": "2026-04-01",
+              "start_time": "10:00:00",
+              "end_time": "10:30:00",
+              "intensity": "MEDIUM",
+              "location": "Main Field",
+              "squad_size": 20,
+              "coach_note": "Keep pace moderate",
+              "status": "COMPLETED"
+            }
+          ]
+        }
+      ]
     }
   ]
 }</pre>
@@ -953,11 +1049,10 @@
                 <div class="card">
                     <h4>Expected Values</h4>
                     <ul>
-                        <li><code>plans[].plan_id</code>: UUID string.</li>
-                        <li><code>plans[].start_date</code>, <code>plans[].end_date</code>: <code>YYYY-MM-DD</code>.
-                        </li>
-                        <li><code>plans[].status</code>: uppercase plan token, currently <code>DRAFT</code> or <code>PUBLISHED</code>.
-                        </li>
+                        <li><code>days[].plans[].plan_id</code> is the coach plan reference for each session group.</li>
+                        <li><code>start_date</code>, <code>end_date</code>, <code>days[].date</code>, and <code>days[].plans[].sessions[].session_date</code> use <code>YYYY-MM-DD</code>.</li>
+                        <li><code>days[].plans[].sessions[].session_type</code>: <code>GROUP</code>, <code>TEAM</code>, or <code>INDIVIDUAL</code>.</li>
+                        <li><code>days[].plans[].sessions[].status</code>: lifecycle token <code>NOT_STARTED</code>, <code>IN_PROGRESS</code>, or <code>COMPLETED</code>.</li>
                     </ul>
                 </div>
             </div>

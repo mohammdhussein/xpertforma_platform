@@ -104,7 +104,7 @@ class CoachCreatePlayerFlowTests(TestCase):
             height_cm=174,
             weight_kg=67,
             foot=PlayerProfile.FOOT_RIGHT,
-            state=PlayerProfile.STATE_NEEDS_REVIEW,
+            state=PlayerProfile.STATE_INJURED,
             fitness_level="starter",
         )
 
@@ -133,7 +133,7 @@ class CoachCreatePlayerFlowTests(TestCase):
         self.assertEqual(player.player_profile.height_cm, 174)
         self.assertEqual(player.player_profile.weight_kg, 67)
         self.assertEqual(player.player_profile.foot, PlayerProfile.FOOT_RIGHT)
-        self.assertEqual(player.player_profile.state, PlayerProfile.STATE_NEEDS_REVIEW)
+        self.assertEqual(player.player_profile.state, PlayerProfile.STATE_INJURED)
         self.assertEqual(player.player_profile.fitness_level, "starter")
         self.assertEqual(
             response.data["position"],
@@ -168,7 +168,7 @@ class CoachCreatePlayerFlowTests(TestCase):
             height_cm=177,
             weight_kg=70,
             foot=PlayerProfile.FOOT_RIGHT,
-            state=PlayerProfile.STATE_NEEDS_REVIEW,
+            state=PlayerProfile.STATE_INJURED,
             fitness_level="elite",
         )
 
@@ -192,7 +192,7 @@ class CoachCreatePlayerFlowTests(TestCase):
         self.assertEqual(player.player_profile.height_cm, 177)
         self.assertEqual(player.player_profile.weight_kg, 70)
         self.assertEqual(player.player_profile.foot, PlayerProfile.FOOT_RIGHT)
-        self.assertEqual(player.player_profile.state, PlayerProfile.STATE_NEEDS_REVIEW)
+        self.assertEqual(player.player_profile.state, PlayerProfile.STATE_INJURED)
         self.assertEqual(player.player_profile.fitness_level, "elite")
 
     def test_duplicate_player_for_same_coach_returns_conflict(self):
