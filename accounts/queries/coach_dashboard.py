@@ -6,8 +6,9 @@ from django.utils import timezone
 
 from accounts.models import PlayerProfile
 from accounts.services.coach_alerts import build_coach_alerts
-from training.models import SessionAttendance, TrainingPlanPlayer, TrainingSession
+from training.models import SessionAttendance, SessionLifecycle, TrainingPlanPlayer, TrainingSession
 from training.statuses import to_api_training_session_type
+from xpertforma_platform.api_values import normalize_api_value
 
 UPCOMING_SESSIONS_LIMIT = 3
 
@@ -100,17 +101,29 @@ def build_coach_dashboard_payload(coach_user, *, now) -> dict:
     attn_pct = round(critical_count / total_all * 100) if total_all > 0 else 0
     top_alerts = all_alerts[:3]
 
-    # --- upcoming_sessions (48h window) ---
+    # --- upcoming_sessions (current session + 48h window) ---
     deadline = now + timedelta(hours=48)
     deadline_date = deadline.date()
     deadline_time = deadline.time()
+    active_or_upcoming_window = (
+        Q(session_date__gt=today)
+        | Q(session_date=today, start_time__gte=current_time)
+        | Q(session_date=today, start_time__lte=current_time, end_time__gte=current_time)
+        | Q(
+            session_date=today,
+            start_time__lte=current_time,
+            end_time__isnull=True,
+            lifecycle__status=SessionLifecycle.IN_PROGRESS,
+        )
+    )
 
     upcoming_qs = list(
         TrainingSession.objects
         .filter(plan_id__in=plan_ids, start_time__isnull=False)
-        .filter(Q(session_date__gt=today) | Q(session_date=today, start_time__gte=current_time))
+        .filter(active_or_upcoming_window)
         .filter(Q(session_date__lt=deadline_date) | Q(session_date=deadline_date, start_time__lte=deadline_time))
-        .select_related("plan")
+        .filter(Q(lifecycle__isnull=True) | ~Q(lifecycle__status=SessionLifecycle.COMPLETED))
+        .select_related("plan", "lifecycle")
         .order_by("session_date", "start_time")[:UPCOMING_SESSIONS_LIMIT]
     )
 
@@ -134,6 +147,8 @@ def build_coach_dashboard_payload(coach_user, *, now) -> dict:
 
     upcoming_out = []
     for s in upcoming_qs:
+        lifecycle = getattr(s, "lifecycle", None)
+        status_value = normalize_api_value(lifecycle.status if lifecycle else SessionLifecycle.NOT_STARTED)
         upcoming_out.append({
             "session_id": s.session_id,
             "plan_id": s.plan_id,
@@ -144,6 +159,7 @@ def build_coach_dashboard_payload(coach_user, *, now) -> dict:
             "location": s.location,
             "assigned_players": assigned_players_map.get(s.plan_id, []),
             "session_type": to_api_training_session_type(s.session_type),
+            "status": status_value,
             "players_count": players_count_map.get(s.plan_id, 0),
         })
 

@@ -19,8 +19,7 @@ class UpcomingSessionSerializer(serializers.Serializer):
     end_time = serializers.TimeField(allow_null=True)
     intensity = serializers.CharField()
     location = serializers.CharField()
-    squad_size = serializers.IntegerField(allow_null=True)
-    coach_note = serializers.CharField()
+    status = serializers.CharField()
 
 
 class WeeklyProgressSerializer(serializers.Serializer):

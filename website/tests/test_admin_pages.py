@@ -64,8 +64,8 @@ class AdminCoachRequestsPageTests(TestCase):
         response = self.client.get("/staff/dashboard/")
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Dashboard")
-        self.assertContains(response, "Overview of coach approvals and player growth.")
+        self.assertContains(response, "User Management")
+        self.assertContains(response, "Manage platform admins, coaches, and player access.")
 
     def test_dashboard_shows_real_summary_data(self):
         self.client.force_login(self.staff_user)
@@ -73,9 +73,10 @@ class AdminCoachRequestsPageTests(TestCase):
         response = self.client.get("/staff/dashboard/")
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Pending Requests")
-        self.assertContains(response, "Approved Coaches")
-        self.assertContains(response, "Total Players")
+        self.assertContains(response, "Total Users")
+        self.assertContains(response, "Coaches")
+        self.assertContains(response, "Players")
+        self.assertContains(response, "Requests")
         self.assertEqual(response.context["dashboard_data"]["summary"]["pending_requests"], 1)
         self.assertEqual(response.context["dashboard_data"]["summary"]["approved_coaches"], 1)
         self.assertEqual(response.context["dashboard_data"]["summary"]["total_players"], 1)

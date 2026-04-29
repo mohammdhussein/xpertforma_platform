@@ -46,10 +46,25 @@ def _build_forgot_password_href():
 
 def _build_admin_nav(current_key):
     return [
-        {"key": "dashboard", "label": "Dashboard", "href": reverse("staff-dashboard")},
-        {"key": "coach_requests", "label": "Coach Requests", "href": reverse("staff-coach-requests")},
-        {"key": "coaches", "label": "Coaches", "href": reverse("staff-coaches")},
-        {"key": "players", "label": "Players", "href": reverse("staff-players")},
+        {
+            "label": "Management",
+            "items": [
+                {"key": "dashboard", "label": "Users", "href": reverse("staff-dashboard"), "icon": "users"},
+                {"key": "coaches", "label": "Coaches", "href": reverse("staff-coaches"), "icon": "briefcase"},
+                {"key": "players", "label": "Players", "href": reverse("staff-players"), "icon": "activity"},
+            ],
+        },
+        {
+            "label": "Monitoring",
+            "items": [
+                {
+                    "key": "coach_requests",
+                    "label": "Coach Requests",
+                    "href": reverse("staff-coach-requests"),
+                    "icon": "clipboard",
+                },
+            ],
+        },
     ], current_key
 
 
@@ -105,8 +120,8 @@ class AdminPageMixin(StaffAccessMixin):
 class DashboardPageView(AdminPageMixin, TemplateView):
     template_name = "website/admin/dashboard.html"
     current_admin_page = "dashboard"
-    page_title = "Dashboard"
-    page_subtitle = "Overview of coach approvals and player growth."
+    page_title = "User Management"
+    page_subtitle = "Manage platform admins, coaches, and player access."
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)

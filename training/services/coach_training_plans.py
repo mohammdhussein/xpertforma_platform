@@ -8,7 +8,7 @@ from training.serializers.training_plans import (
     SessionCreateSerializer,
     TrainingPlanCreateSerializer,
 )
-from training.statuses import to_api_training_session_type
+from training.statuses import Intensity, to_api_training_session_type
 
 
 def _normalize_sessions_payload(*, raw_sessions, start_date, end_date):
@@ -40,6 +40,8 @@ def _normalize_sessions_payload(*, raw_sessions, start_date, end_date):
                 ),
                 "start_time": session_payload.get("start_time"),
                 "end_time": session_payload.get("end_time"),
+                "intensity": session_payload.get("intensity", Intensity.MEDIUM),
+                "location": session_payload.get("location", ""),
                 "notes": session_payload.get("notes", ""),
             }
         )
@@ -52,6 +54,8 @@ def _normalize_sessions_payload(*, raw_sessions, start_date, end_date):
                 "session_type": validated_session.get("session_type", TrainingSession.SESSION_TYPE_GROUP),
                 "start_time": validated_session.get("start_time"),
                 "end_time": validated_session.get("end_time"),
+                "intensity": validated_session.get("intensity", Intensity.MEDIUM),
+                "location": validated_session.get("location", ""),
                 "notes": validated_session.get("notes", ""),
             }
         )

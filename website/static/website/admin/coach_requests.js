@@ -70,6 +70,50 @@
             .replaceAll("'", "&#39;");
     }
 
+    function initials(value) {
+        return String(value || "?")
+            .trim()
+            .split(/\s+/)
+            .slice(0, 2)
+            .map((part) => part[0]?.toUpperCase() || "")
+            .join("") || "?";
+    }
+
+    function statusClass(status) {
+        const normalized = String(status || "").trim().toLowerCase().replaceAll("_", "-");
+        if (["pending", "approved", "rejected", "inactive", "active"].includes(normalized)) {
+            return normalized;
+        }
+        return "inactive";
+    }
+
+    function statusBadge(status) {
+        const label = String(status || "")
+            .trim()
+            .replaceAll("_", " ")
+            .replaceAll("-", " ")
+            .toLowerCase()
+            .replace(/\b\w/g, (letter) => letter.toUpperCase());
+        return `
+            <span class="status-pill status-pill--${statusClass(status)}">
+                <span class="status-pill__dot"></span>
+                ${escapeHtml(label)}
+            </span>
+        `;
+    }
+
+    function buildIdentityCell(name, meta) {
+        return `
+            <div class="entity-cell">
+                <span class="entity-avatar">${escapeHtml(initials(name))}</span>
+                <span class="entity-cell__text">
+                    <strong>${escapeHtml(name || "Unnamed coach")}</strong>
+                    ${meta ? `<small>${escapeHtml(meta)}</small>` : ""}
+                </span>
+            </div>
+        `;
+    }
+
     function buildActionUrl(template, coachId) {
         return template.replace(DUMMY_UUID, coachId);
     }
@@ -100,27 +144,26 @@
             const busyAction = state.actionByCoachId[request.id];
             const isBusy = Boolean(busyAction);
             const certificateButton = request.certificate_url
-                ? `<button type="button" class="button button--secondary button--inline" data-action="view" data-id="${request.id}" data-certificate-url="${escapeHtml(request.certificate_url)}">View Certificate</button>`
+                ? `<button type="button" class="table-icon-button table-icon-button--primary" aria-label="View certificate for ${escapeHtml(fullName)}" title="View certificate" data-action="view" data-id="${request.id}" data-certificate-url="${escapeHtml(request.certificate_url)}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></button>`
                 : `<span class="muted-value">Not provided</span>`;
 
             return `
                 <tr>
                     <td data-label="Coach">
-                        <p class="coach-name">${escapeHtml(fullName)}</p>
+                        ${buildIdentityCell(fullName)}
                     </td>
                     <td data-label="Contact">
-                        <p class="coach-name">${escapeHtml(request.email)}</p>
-                        <div class="coach-meta">${escapeHtml(request.phone_number || "Phone not provided")}</div>
+                        <span class="table-meta">${escapeHtml(request.phone_number || "Phone not provided")}</span>
                     </td>
                     <td data-label="Certificate">${certificateButton}</td>
                     <td data-label="Status">
-                        <span class="status-chip status-chip--${request.status.toLowerCase()}">${escapeHtml(request.status)}</span>
+                        ${statusBadge(request.status)}
                     </td>
                     <td data-label="Created">${escapeHtml(formatDate(request.created_at))}</td>
                     <td data-label="Actions">
-                        <div class="row-actions">
-                            <button type="button" class="button button--success button--inline" data-action="approve" data-id="${request.id}" ${isBusy ? "disabled" : ""}>${busyAction === "approve" ? "Approving..." : "Approve"}</button>
-                            <button type="button" class="button button--danger button--inline" data-action="reject" data-id="${request.id}" ${isBusy ? "disabled" : ""}>${busyAction === "reject" ? "Rejecting..." : "Reject"}</button>
+                        <div class="table-icon-actions">
+                            <button type="button" class="table-icon-button table-icon-button--success" aria-label="Approve ${escapeHtml(fullName)}" title="${busyAction === "approve" ? "Approving..." : "Approve"}" data-action="approve" data-id="${request.id}" ${isBusy ? "disabled" : ""}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></button>
+                            <button type="button" class="table-icon-button table-icon-button--danger" aria-label="Reject ${escapeHtml(fullName)}" title="${busyAction === "reject" ? "Rejecting..." : "Reject"}" data-action="reject" data-id="${request.id}" ${isBusy ? "disabled" : ""}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
                         </div>
                     </td>
                 </tr>

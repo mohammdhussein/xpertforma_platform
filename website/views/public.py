@@ -122,7 +122,7 @@ PRODUCT_PREVIEWS = [
     {
         "title": "Player Home Dashboard",
         "label": "Player",
-        "description": "A clear weekly home for today’s session, nutrition, and performance momentum.",
+        "description": "A clear weekly home for today's session, nutrition, and performance momentum.",
         "tone": "blue",
         "metrics": ["Today Session", "Weekly Score", "Nutrition Check"],
     },

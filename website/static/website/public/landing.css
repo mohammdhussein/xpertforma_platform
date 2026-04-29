@@ -25,14 +25,18 @@ html {
     scroll-behavior: smooth;
 }
 
+html,
+body {
+    overflow-x: hidden;
+}
+
 body {
     margin: 0;
     font-family: "Nunito", "Segoe UI", "Helvetica Neue", sans-serif;
     color: var(--xf-text);
     background:
-        radial-gradient(circle at 12% 12%, rgba(30, 110, 235, 0.12), transparent 22%),
-        radial-gradient(circle at 86% 18%, rgba(245, 158, 11, 0.12), transparent 18%),
-        radial-gradient(circle at 52% 100%, rgba(34, 197, 94, 0.1), transparent 24%),
+        linear-gradient(135deg, rgba(30, 110, 235, 0.08), transparent 28%),
+        linear-gradient(225deg, rgba(34, 197, 94, 0.07), transparent 26%),
         linear-gradient(180deg, #fbfdff 0%, var(--xf-bg) 100%);
 }
 
@@ -93,6 +97,7 @@ textarea {
     align-items: center;
     gap: 14px;
     min-width: 0;
+    overflow: hidden;
 }
 
 .brand-mark__icon-frame {
@@ -117,6 +122,7 @@ textarea {
 .brand-mark__text {
     display: grid;
     gap: 2px;
+    min-width: 0;
 }
 
 .brand-mark__text strong {
@@ -128,6 +134,9 @@ textarea {
     font-size: 0.76rem;
     letter-spacing: 0.08em;
     text-transform: uppercase;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .site-nav {
@@ -243,7 +252,7 @@ textarea {
 }
 
 .hero-section {
-    padding: 34px 0 52px;
+    padding: 42px 0 62px;
 }
 
 .hero-grid {
@@ -271,6 +280,7 @@ textarea {
 
 .eyebrow-badge {
     width: fit-content;
+    max-width: 100%;
     min-height: 38px;
     padding: 0 14px;
     border-radius: 999px;
@@ -313,6 +323,7 @@ textarea {
     padding: 0 14px;
     display: inline-flex;
     align-items: center;
+    max-width: 100%;
     border-radius: 999px;
     background: rgba(255, 255, 255, 0.88);
     border: 1px solid rgba(219, 229, 240, 0.94);
@@ -323,13 +334,11 @@ textarea {
 
 .hero-visual {
     position: relative;
-    min-height: 620px;
-    display: grid;
-    align-items: center;
+    isolation: isolate;
 }
 
 .hero-dashboard,
-.floating-card,
+.workflow-card,
 .info-card,
 .feature-card,
 .step-card,
@@ -346,20 +355,47 @@ textarea {
     box-shadow: var(--xf-shadow);
 }
 
+.hero-product-preview {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1.2fr) minmax(210px, 0.8fr);
+    gap: 16px;
+    align-items: stretch;
+    padding: 18px;
+    border-radius: 30px;
+    background:
+        linear-gradient(145deg, rgba(255, 255, 255, 0.96), rgba(248, 250, 252, 0.9)),
+        linear-gradient(135deg, rgba(30, 110, 235, 0.08), rgba(34, 197, 94, 0.08));
+    border: 1px solid rgba(219, 229, 240, 0.98);
+    box-shadow: 0 28px 70px rgba(15, 23, 42, 0.1);
+    overflow: hidden;
+}
+
+.hero-product-preview::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto;
+    height: 5px;
+    background: linear-gradient(90deg, var(--xf-primary), var(--xf-secondary), var(--xf-orange));
+}
+
 .hero-dashboard {
     position: relative;
     z-index: 2;
-    padding: 26px;
-    border-radius: var(--xf-radius-xl);
+    display: flex;
+    flex-direction: column;
+    padding: 24px;
+    border-radius: 24px;
     overflow: hidden;
+    box-shadow: 0 18px 42px rgba(15, 23, 42, 0.07);
 }
 
 .hero-dashboard::before {
     content: "";
     position: absolute;
     inset: 0 0 auto 0;
-    height: 5px;
-    background: linear-gradient(90deg, var(--xf-primary), var(--xf-secondary), var(--xf-orange));
+    height: 4px;
+    background: linear-gradient(90deg, rgba(30, 110, 235, 0.85), rgba(34, 197, 94, 0.85));
 }
 
 .hero-dashboard__header,
@@ -381,7 +417,8 @@ textarea {
 
 .hero-dashboard__header h2 {
     margin: 0;
-    font-size: 1.6rem;
+    font-size: clamp(1.35rem, 2.5vw, 1.72rem);
+    line-height: 1.12;
 }
 
 .hero-dashboard__pill,
@@ -404,25 +441,35 @@ textarea {
 .hero-dashboard__stats {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 14px;
-    margin: 24px 0;
+    gap: 12px;
+    margin: 22px 0;
 }
 
 .mini-stat {
+    display: grid;
+    align-content: start;
+    min-height: 118px;
     padding: 16px;
-    border-radius: 20px;
+    border-radius: 18px;
     box-shadow: var(--xf-shadow-soft);
 }
 
 .mini-stat strong {
     display: block;
-    margin-top: 8px;
+    margin-top: 9px;
     font-size: 1.3rem;
 }
 
 .mini-stat__label {
     color: var(--xf-muted);
     font-size: 0.86rem;
+}
+
+.mini-stat__note {
+    margin-top: 10px;
+    color: var(--xf-muted);
+    font-size: 0.78rem;
+    font-weight: 700;
 }
 
 .mini-stat--green {
@@ -434,8 +481,9 @@ textarea {
 }
 
 .hero-dashboard__plan {
+    margin-top: auto;
     padding: 18px;
-    border-radius: 22px;
+    border-radius: 20px;
     box-shadow: var(--xf-shadow-soft);
 }
 
@@ -447,13 +495,13 @@ textarea {
 .timeline-stack {
     display: flex;
     flex-wrap: wrap;
-    gap: 10px;
+    gap: 9px;
     margin-top: 18px;
 }
 
 .timeline-item {
-    min-height: 38px;
-    padding: 0 14px;
+    min-height: 36px;
+    padding: 0 13px;
     display: inline-flex;
     align-items: center;
     border-radius: 999px;
@@ -475,28 +523,35 @@ textarea {
     color: #b45309;
 }
 
-.floating-card {
-    position: absolute;
-    width: min(270px, 72%);
-    padding: 18px 18px 16px;
-    border-radius: 24px;
-    z-index: 1;
-    box-shadow: 0 18px 38px rgba(15, 23, 42, 0.1);
+.hero-workflow {
+    position: relative;
+    z-index: 2;
+    display: grid;
+    gap: 14px;
 }
 
-.floating-card p {
-    margin: 10px 0 0;
+.workflow-card {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    padding: 16px;
+    border-radius: 22px;
+    box-shadow: var(--xf-shadow-soft);
+}
+
+.workflow-card p {
+    margin: 10px 0 14px;
     color: var(--xf-muted);
-    line-height: 1.6;
+    line-height: 1.48;
 }
 
-.floating-card strong {
+.workflow-card strong {
     display: block;
     margin-top: 8px;
     font-size: 1.12rem;
 }
 
-.floating-card__label {
+.workflow-card__label {
     color: var(--xf-primary);
     font-size: 0.8rem;
     font-weight: 700;
@@ -504,14 +559,29 @@ textarea {
     letter-spacing: 0.08em;
 }
 
-.floating-card--top {
-    top: 6%;
-    right: -3%;
+.workflow-card--coach {
+    background: linear-gradient(180deg, rgba(30, 110, 235, 0.08), #fff 58%);
 }
 
-.floating-card--bottom {
-    bottom: 2%;
-    left: -3%;
+.workflow-card--admin {
+    background: linear-gradient(180deg, rgba(245, 158, 11, 0.1), #fff 58%);
+}
+
+.workflow-progress {
+    position: relative;
+    height: 10px;
+    margin-top: auto;
+    overflow: hidden;
+    border-radius: 999px;
+    background: rgba(30, 110, 235, 0.1);
+}
+
+.workflow-progress span {
+    display: block;
+    width: 74%;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, var(--xf-primary), var(--xf-secondary));
 }
 
 .section-block {
@@ -943,10 +1013,6 @@ textarea {
         justify-content: flex-start;
     }
 
-    .hero-visual {
-        min-height: 560px;
-    }
-
     .feature-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
@@ -1001,18 +1067,15 @@ textarea {
     }
 
     .hero-visual {
-        min-height: auto;
         padding-top: 14px;
     }
 
-    .floating-card {
-        position: relative;
-        width: 100%;
-        top: auto;
-        right: auto;
-        bottom: auto;
-        left: auto;
-        margin-top: 16px;
+    .hero-product-preview {
+        grid-template-columns: 1fr;
+    }
+
+    .hero-workflow {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 }
 
@@ -1023,6 +1086,37 @@ textarea {
 
     .site-header {
         padding: 14px 0;
+    }
+
+    .site-header__inner {
+        gap: 10px;
+        padding: 10px 12px;
+    }
+
+    .brand-mark {
+        flex: 1 1 auto;
+        gap: 10px;
+    }
+
+    .brand-mark__icon-frame,
+    .brand-mark__icon {
+        width: 44px;
+        height: 44px;
+    }
+
+    .brand-mark__icon-frame {
+        border-radius: 14px;
+    }
+
+    .brand-mark__eyebrow {
+        max-width: 210px;
+        font-size: 0.68rem;
+    }
+
+    .nav-toggle {
+        flex: 0 0 44px;
+        width: 44px;
+        height: 44px;
     }
 
     .site-header__inner,
@@ -1047,7 +1141,33 @@ textarea {
         font-size: clamp(2.35rem, 10vw, 3.25rem);
     }
 
+    .eyebrow-badge {
+        min-height: 0;
+        padding: 9px 12px;
+        line-height: 1.35;
+        white-space: normal;
+    }
+
+    .hero-product-preview {
+        padding: 12px;
+        border-radius: 24px;
+    }
+
+    .hero-dashboard {
+        padding: 20px;
+    }
+
+    .hero-dashboard__header,
+    .hero-dashboard__plan-head {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
     .hero-dashboard__stats {
+        grid-template-columns: 1fr;
+    }
+
+    .hero-workflow {
         grid-template-columns: 1fr;
     }
 

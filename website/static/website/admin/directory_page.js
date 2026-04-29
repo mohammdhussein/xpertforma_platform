@@ -22,6 +22,10 @@
         tableWrap: document.getElementById("directory-table-wrap"),
         tableBody: document.getElementById("directory-table-body"),
         feedbackBanner: document.getElementById("directory-feedback-banner"),
+        certificateModal: document.getElementById("directory-certificate-modal"),
+        certificateImage: document.getElementById("directory-certificate-image"),
+        certificateEmpty: document.getElementById("directory-certificate-empty"),
+        certificateOpenLink: document.getElementById("directory-certificate-open-link"),
     };
 
     const state = {
@@ -66,6 +70,43 @@
         return "inactive";
     }
 
+    function initials(value) {
+        return String(value || "?")
+            .trim()
+            .split(/\s+/)
+            .slice(0, 2)
+            .map((part) => part[0]?.toUpperCase() || "")
+            .join("") || "?";
+    }
+
+    function statusBadge(status) {
+        const normalized = statusClass(status);
+        const label = String(status || "")
+            .trim()
+            .replaceAll("_", " ")
+            .replaceAll("-", " ")
+            .toLowerCase()
+            .replace(/\b\w/g, (letter) => letter.toUpperCase());
+        return `
+            <span class="status-pill status-pill--${normalized}">
+                <span class="status-pill__dot"></span>
+                ${escapeHtml(label)}
+            </span>
+        `;
+    }
+
+    function buildIdentityCell(name, meta) {
+        return `
+            <div class="entity-cell">
+                <span class="entity-avatar">${escapeHtml(initials(name))}</span>
+                <span class="entity-cell__text">
+                    <strong>${escapeHtml(name || "Unnamed")}</strong>
+                    ${meta ? `<small>${escapeHtml(meta)}</small>` : ""}
+                </span>
+            </div>
+        `;
+    }
+
     function setBanner(message, tone) {
         if (state.bannerTimer) {
             window.clearTimeout(state.bannerTimer);
@@ -105,36 +146,36 @@
     function buildCoachRow(row) {
         const busy = Boolean(state.actionById[row.id]);
         const actionLabel = row.is_active ? "Disable" : "Activate";
-        const loadingLabel = row.is_active ? "Disabling..." : "Activating...";
         const certificateButton = row.certificate_url
-            ? `<a class="button button--secondary button--inline" href="${escapeHtml(row.certificate_url)}" target="_blank" rel="noopener noreferrer">View Certificate</a>`
-            : "";
+            ? `<button type="button" class="table-icon-button table-icon-button--primary" aria-label="View certificate for ${escapeHtml(row.full_name)}" title="View certificate" data-action="view-certificate" data-certificate-url="${escapeHtml(row.certificate_url)}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></button>`
+            : `<span class="muted-value">Not provided</span>`;
 
         return `
             <tr>
                 <td data-label="Coach">
-                    <p class="coach-name">${escapeHtml(row.full_name)}</p>
+                    ${buildIdentityCell(row.full_name)}
                 </td>
                 <td data-label="Contact">
-                    <p class="coach-name">${escapeHtml(row.email)}</p>
-                    <div class="coach-meta">${escapeHtml(row.phone_number || "Phone not provided")}</div>
+                    <span class="table-meta">${escapeHtml(row.phone_number || "Phone not provided")}</span>
                 </td>
+                <td data-label="Certificate">${certificateButton}</td>
                 <td data-label="Status">
-                    <span class="status-chip status-chip--${statusClass(row.status)}">${escapeHtml(row.status)}</span>
+                    ${statusBadge(row.status)}
                 </td>
-                <td data-label="Players">${escapeHtml(row.player_count)}</td>
+                <td data-label="Players"><strong class="table-number">${escapeHtml(row.player_count)}</strong></td>
                 <td data-label="Joined">${escapeHtml(formatDate(row.joined_at))}</td>
                 <td data-label="Actions">
-                    <div class="row-actions row-actions--stacked">
-                        ${certificateButton}
+                    <div class="table-icon-actions">
                         <button
                             type="button"
-                            class="button ${row.is_active ? "button--danger" : "button--success"} button--inline"
+                            class="table-icon-button ${row.is_active ? "table-icon-button--danger" : "table-icon-button--success"}"
+                            aria-label="${actionLabel} ${escapeHtml(row.full_name)}"
+                            title="${actionLabel}"
                             data-action="toggle-active"
                             data-id="${row.id}"
                             ${busy ? "disabled" : ""}
                         >
-                            ${busy ? loadingLabel : actionLabel}
+                            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2v10"/><path d="M18.4 6.6a9 9 0 1 1-12.8 0"/></svg>
                         </button>
                     </div>
                 </td>
@@ -146,12 +187,12 @@
         return `
             <tr>
                 <td data-label="Player">
-                    <p class="coach-name">${escapeHtml(row.full_name)}</p>
+                    ${buildIdentityCell(row.full_name)}
                 </td>
-                <td data-label="Email">${escapeHtml(row.email)}</td>
-                <td data-label="Assigned Coach">${escapeHtml(row.assigned_coach || "Unassigned")}</td>
+                <td data-label="Email"><span class="table-meta">${escapeHtml(row.email)}</span></td>
+                <td data-label="Assigned Coach">${row.assigned_coach ? escapeHtml(row.assigned_coach) : `<span class="muted-value">Unassigned</span>`}</td>
                 <td data-label="Status">
-                    <span class="status-chip status-chip--${statusClass(row.status)}">${escapeHtml(row.status)}</span>
+                    ${statusBadge(row.status)}
                 </td>
                 <td data-label="Joined">${escapeHtml(formatDate(row.joined_at))}</td>
             </tr>
@@ -252,15 +293,71 @@
         }
     }
 
+    function openCertificateModal(url) {
+        if (!elements.certificateModal || !elements.certificateImage || !elements.certificateEmpty || !elements.certificateOpenLink) {
+            return;
+        }
+
+        elements.certificateModal.classList.remove("hidden");
+        elements.certificateModal.setAttribute("aria-hidden", "false");
+
+        if (url) {
+            elements.certificateImage.src = url;
+            elements.certificateImage.classList.remove("hidden");
+            elements.certificateOpenLink.href = url;
+            elements.certificateOpenLink.classList.remove("hidden");
+            elements.certificateEmpty.classList.add("hidden");
+            return;
+        }
+
+        elements.certificateImage.removeAttribute("src");
+        elements.certificateImage.classList.add("hidden");
+        elements.certificateOpenLink.removeAttribute("href");
+        elements.certificateOpenLink.classList.add("hidden");
+        elements.certificateEmpty.classList.remove("hidden");
+    }
+
+    function closeCertificateModal() {
+        if (!elements.certificateModal || !elements.certificateImage) {
+            return;
+        }
+
+        elements.certificateModal.classList.add("hidden");
+        elements.certificateModal.setAttribute("aria-hidden", "true");
+        elements.certificateImage.removeAttribute("src");
+    }
+
     if (config.kind === "coaches") {
         elements.tableBody.addEventListener("click", (event) => {
-            const button = event.target.closest("[data-action='toggle-active']");
+            const button = event.target.closest("[data-action]");
             if (!button) {
                 return;
             }
-            toggleCoachActive(button.dataset.id);
+
+            if (button.dataset.action === "view-certificate") {
+                openCertificateModal(button.dataset.certificateUrl || "");
+                return;
+            }
+
+            if (button.dataset.action === "toggle-active") {
+                toggleCoachActive(button.dataset.id);
+            }
         });
     }
+
+    elements.certificateModal?.addEventListener("click", (event) => {
+        if (event.target.dataset.closeDirectoryCertificate === "true") {
+            closeCertificateModal();
+        }
+    });
+    elements.certificateImage?.addEventListener("error", () => {
+        openCertificateModal("");
+    });
+    document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") {
+            closeCertificateModal();
+        }
+    });
 
     elements.retryButton.addEventListener("click", () => refreshData({ showBlockingState: true }));
 

@@ -78,7 +78,6 @@ class TrainingSession(models.Model):
     )
     location         = models.CharField(max_length=120, blank=True)
     squad_size       = models.PositiveIntegerField(null=True, blank=True)
-    coach_note       = models.TextField(blank=True)
 
     class Meta:
         ordering = ["session_date", "start_time"]

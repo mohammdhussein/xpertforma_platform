@@ -44,6 +44,8 @@ def build_user_info_payload(user):
     return {
         "id": user.id,
         "name": user.name,
+        "first_name": user.first_name,
+        "last_name": user.last_name,
         "email": user.email,
         "role": primary_role,
         "coach": coach_data,

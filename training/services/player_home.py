@@ -81,8 +81,7 @@ def build_player_home(player, today) -> dict:
             "end_time": s.end_time,
             "intensity": s.intensity,
             "location": s.location,
-            "squad_size": s.squad_size,
-            "coach_note": s.coach_note,
+            "status": "NOT_STARTED",
         }
         for s in sessions
     ]

@@ -206,6 +206,7 @@ class CoachDashboardTests(TestCase):
         first = sessions[0]
         self.assertEqual(first["title"], "Today Session")
         self.assertEqual(first["end_time"], "10:30:00")
+        self.assertEqual(first["status"], "NOT_STARTED")
         self.assertEqual(len(first["assigned_players"]), 1)
         self.assertEqual(str(first["assigned_players"][0]["id"]), str(self.player.id))
 
@@ -215,7 +216,79 @@ class CoachDashboardTests(TestCase):
         self.assertNotIn("duration_minutes", first)
 
     # ------------------------------------------------------------------
-    # Test 5 — alerts: one per severity, correct order, alerts_total
+    # Test 5 - upcoming_sessions include available time windows and exclude completed lifecycle sessions
+    # ------------------------------------------------------------------
+    def test_upcoming_sessions_exclude_completed_sessions(self):
+        mocked_now = timezone.datetime(2026, 4, 8, 8, 0, tzinfo=dt_timezone.utc)
+        today = mocked_now.date()
+
+        plan = _make_plan(self.coach, today=today)
+        TrainingPlanPlayer.objects.create(plan=plan, player=self.player, assigned_by=self.coach)
+
+        completed_session = TrainingSession.objects.create(
+            plan=plan,
+            title="Completed Future Session",
+            session_date=today,
+            session_type="GROUP",
+            start_time=time(9, 0),
+            end_time=time(10, 0),
+        )
+        SessionLifecycle.objects.create(session=completed_session, status=SessionLifecycle.COMPLETED)
+
+        active_session = TrainingSession.objects.create(
+            plan=plan,
+            title="Active Available Session",
+            session_date=today,
+            session_type="GROUP",
+            start_time=time(7, 0),
+            end_time=time(9, 0),
+        )
+        SessionLifecycle.objects.create(session=active_session, status=SessionLifecycle.IN_PROGRESS)
+
+        expired_not_started_session = TrainingSession.objects.create(
+            plan=plan,
+            title="Expired Not Started Session",
+            session_date=today,
+            session_type="GROUP",
+            start_time=time(6, 0),
+            end_time=time(7, 0),
+        )
+        SessionLifecycle.objects.create(session=expired_not_started_session, status=SessionLifecycle.NOT_STARTED)
+
+        in_progress_session = TrainingSession.objects.create(
+            plan=plan,
+            title="In Progress Without End Time",
+            session_date=today,
+            session_type="GROUP",
+            start_time=time(7, 30),
+            end_time=None,
+        )
+        SessionLifecycle.objects.create(session=in_progress_session, status=SessionLifecycle.IN_PROGRESS)
+
+        TrainingSession.objects.create(
+            plan=plan,
+            title="Available Not Started Session",
+            session_date=today + timedelta(days=1),
+            session_type="GROUP",
+            start_time=time(9, 0),
+            end_time=time(10, 0),
+        )
+
+        with patch("accounts.views.coach_dashboard._dashboard_now", return_value=mocked_now):
+            response = self.client.get("/api/coach/dashboard/")
+
+        self.assertEqual(response.status_code, 200)
+        titles = [session["title"] for session in response.data["upcoming_sessions"]]
+        self.assertNotIn("Completed Future Session", titles)
+        self.assertNotIn("Expired Not Started Session", titles)
+        self.assertEqual(titles, [
+            "Active Available Session",
+            "In Progress Without End Time",
+            "Available Not Started Session",
+        ])
+
+    # ------------------------------------------------------------------
+    # Test 6 - alerts: one per severity, correct order, alerts_total
     # ------------------------------------------------------------------
     def test_alerts_one_per_severity(self):
         mocked_now = timezone.datetime(2026, 4, 8, 8, 0, tzinfo=dt_timezone.utc)
