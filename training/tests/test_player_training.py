@@ -54,7 +54,6 @@ class PlayerTrainingRangeTests(TestCase):
             location="Main Field",
             squad_size=20,
             notes="Bring water",
-            coach_note="Keep pace moderate",
         )
         self.s2 = TrainingSession.objects.create(
             plan=self.plan,
@@ -111,10 +110,19 @@ class PlayerTrainingRangeTests(TestCase):
         self.assertEqual(first["end_time"], "10:30:00")
         self.assertEqual(first["intensity"], "MEDIUM")
         self.assertEqual(first["location"], "Main Field")
-        self.assertEqual(first["squad_size"], 20)
-        self.assertNotIn("notes", first)
+        self.assertEqual(first["notes"], "Bring water")
+        self.assertNotIn("time_range", first)
+        self.assertNotIn("squad_size", first)
+        self.assertEqual(
+            first["lifecycle"],
+            {
+                "status": "COMPLETED",
+                "started_at": None,
+                "ended_at": None,
+            },
+        )
         self.assertNotIn("duration_minutes", first)
-        self.assertEqual(first["coach_note"], "Keep pace moderate")
+        self.assertNotIn("coach_note", first)
         self.assertEqual(first["status"], "COMPLETED")
 
     def test_sessions_are_ordered_by_start_time(self):
@@ -140,6 +148,14 @@ class PlayerTrainingRangeTests(TestCase):
         response = self.client.get(URL, {"start_date": "2026-04-03", "end_date": "2026-04-03"})
         sessions = response.data["days"][0]["plans"][0]["sessions"]
         self.assertEqual(sessions[0]["status"], "NOT_STARTED")
+        self.assertEqual(
+            sessions[0]["lifecycle"],
+            {
+                "status": "NOT_STARTED",
+                "started_at": None,
+                "ended_at": None,
+            },
+        )
 
     def test_default_is_today_single_day(self):
         response = self.client.get(URL)

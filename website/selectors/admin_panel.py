@@ -2,7 +2,7 @@ from django.db.models import Count, Q
 from django.utils import timezone
 
 from accounts.files import build_media_value_url
-from accounts.models import CoachProfile, PlayerProfile
+from accounts.models import CoachProfile, PlayerProfile, User
 from accounts.statuses import (
     COACH_APPROVAL_APPROVED,
     COACH_APPROVAL_PENDING,
@@ -35,6 +35,17 @@ def _humanize_player_status(login_status):
     if not normalized:
         return "UNKNOWN"
     return normalized.replace("_", " ").upper()
+
+
+def _build_admin_user_row(user):
+    created_at = user.created_at
+    return {
+        "id": str(user.id),
+        "name": user.name or user.email,
+        "email": user.email,
+        "status": "Active" if user.is_active else "Inactive",
+        "created": f"{created_at.month}/{created_at.day}/{created_at.year}" if created_at else "",
+    }
 
 
 def _build_coach_request_row(coach_profile):
@@ -89,6 +100,7 @@ def build_admin_dashboard_payload():
 
     return {
         "summary": {
+            "total_users": User.objects.count(),
             "pending_requests": CoachProfile.objects.filter(
                 approval_status__iexact=COACH_APPROVAL_PENDING
             ).count(),
@@ -110,6 +122,10 @@ def build_admin_dashboard_payload():
                 "created_at": profile.user.created_at,
             }
             for profile in recent_pending_requests
+        ],
+        "users": [
+            _build_admin_user_row(user)
+            for user in User.objects.order_by("-created_at")
         ],
     }
 

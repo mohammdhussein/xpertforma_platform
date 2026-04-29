@@ -1,71 +1,125 @@
 {% extends "website/admin/panel_base.html" %}
 
-{% block title %}Dashboard | XpertForma Admin{% endblock %}
-
-{% block page_actions %}
-    <a href="{% url 'staff-coach-requests' %}" class="button button--secondary">Open Coach Requests</a>
-{% endblock %}
+{% block title %}User Management | XpertForma Admin{% endblock %}
 
 {% block page_content %}
-<section class="summary-grid">
-    <article class="summary-card">
-        <span class="summary-card__label">Pending Requests</span>
-        <strong class="summary-card__value">{{ dashboard_data.summary.pending_requests }}</strong>
+<nav class="admin-breadcrumb" aria-label="Breadcrumb">
+    <span>Admin</span>
+    <span aria-hidden="true">/</span>
+    <strong>Users</strong>
+</nav>
+
+<section class="admin-stats-grid" aria-label="User management statistics">
+    <article class="admin-stat-card">
+        <span class="admin-stat-card__icon admin-stat-card__icon--blue" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        </span>
+        <span class="stat-card__content">
+            <span class="summary-card__label">Total Users</span>
+            <strong id="stat-total-users" class="summary-card__value">{{ dashboard_data.summary.total_users }}</strong>
+        </span>
     </article>
-    <article class="summary-card">
-        <span class="summary-card__label">Approved Coaches</span>
-        <strong class="summary-card__value">{{ dashboard_data.summary.approved_coaches }}</strong>
+    <article class="admin-stat-card">
+        <span class="admin-stat-card__icon admin-stat-card__icon--emerald" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M3 21h18"/><path d="M7 21V7l5-4 5 4v14"/><path d="M9 9h6"/><path d="M9 13h6"/></svg>
+        </span>
+        <span class="stat-card__content">
+            <span class="summary-card__label">Coaches</span>
+            <strong class="summary-card__value">{{ dashboard_data.summary.total_coaches }}</strong>
+        </span>
     </article>
-    <article class="summary-card">
-        <span class="summary-card__label">Total Coaches</span>
-        <strong class="summary-card__value">{{ dashboard_data.summary.total_coaches }}</strong>
+    <article class="admin-stat-card">
+        <span class="admin-stat-card__icon admin-stat-card__icon--violet" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+        </span>
+        <span class="stat-card__content">
+            <span class="summary-card__label">Players</span>
+            <strong class="summary-card__value">{{ dashboard_data.summary.total_players }}</strong>
+        </span>
     </article>
-    <article class="summary-card">
-        <span class="summary-card__label">Total Players</span>
-        <strong class="summary-card__value">{{ dashboard_data.summary.total_players }}</strong>
+    <article class="admin-stat-card">
+        <span class="admin-stat-card__icon admin-stat-card__icon--amber" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M9 14h6"/><path d="M9 10h6"/></svg>
+        </span>
+        <span class="stat-card__content">
+            <span class="summary-card__label">Requests</span>
+            <strong class="summary-card__value">{{ dashboard_data.summary.pending_requests }}</strong>
+        </span>
     </article>
 </section>
 
-<section class="panel-card panel-card--spacious">
-    <div class="panel-card__header">
+<section class="panel-card admin-users-card">
+    <div class="panel-card__header admin-users-card__header">
         <div>
-            <h2 class="section-title">Latest pending requests</h2>
-            <p class="section-subtitle">The most recent coach signups waiting for approval.</p>
+            <h2 class="section-title">All Users</h2>
+            <p id="users-result-count" class="section-subtitle">Showing all users.</p>
         </div>
+        <button type="button" class="button button--primary" data-open-user-modal>
+            <span aria-hidden="true">+</span>
+            Add User
+        </button>
     </div>
 
-    {% if dashboard_data.recent_requests %}
-        <div class="table-wrap">
-            <table class="requests-table">
-                <thead>
-                <tr>
-                    <th>Coach</th>
-                    <th>Email</th>
-                    <th>Status</th>
-                    <th>Created</th>
-                </tr>
-                </thead>
-                <tbody>
-                {% for request in dashboard_data.recent_requests %}
-                    <tr>
-                        <td data-label="Coach">
-                            <p class="coach-name">{{ request.full_name }}</p>
-                        </td>
-                        <td data-label="Email">{{ request.email }}</td>
-                        <td data-label="Status">
-                            <span class="status-chip status-chip--pending">{{ request.status }}</span>
-                        </td>
-                        <td data-label="Created">{{ request.created_at|date:"M j, Y g:i A" }}</td>
-                    </tr>
-                {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    {% else %}
-        <div class="state-card state-card--compact">
-            <h3>No pending requests</h3>
-            <p>All coach signups are up to date right now.</p>
-        </div>
-    {% endif %}
+    <div class="table-wrap">
+        <table class="requests-table admin-users-table">
+            <thead>
+            <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Status</th>
+                <th>Created</th>
+                <th class="requests-table__actions">Actions</th>
+            </tr>
+            </thead>
+            <tbody id="users-table-body"></tbody>
+        </table>
+    </div>
+    <div id="users-empty-state" class="state-card state-card--compact hidden">
+        <h3>No users found</h3>
+        <p>Try a different name or email.</p>
+    </div>
 </section>
+
+<div id="user-modal" class="modal hidden" aria-hidden="true">
+    <div class="modal__backdrop" data-close-user-modal="true"></div>
+    <form class="modal__card user-modal-card" id="user-form" aria-labelledby="user-modal-title">
+        <div class="modal__header">
+            <div>
+                <p class="eyebrow">Admin Access</p>
+                <h2 id="user-modal-title" class="modal__title">Add User</h2>
+            </div>
+            <button type="button" class="icon-button" aria-label="Close user form" data-close-user-modal="true">&times;</button>
+        </div>
+
+        <div class="user-form-grid">
+            <label class="form-field">
+                <span class="field-label">Name</span>
+                <span class="input-shell"><input id="user-name" class="form-input" type="text" required></span>
+            </label>
+            <label class="form-field">
+                <span class="field-label">Email</span>
+                <span class="input-shell"><input id="user-email" class="form-input" type="email" required></span>
+            </label>
+            <label class="form-field">
+                <span class="field-label">Status</span>
+                <span class="input-shell">
+                    <select id="user-status" class="form-input" required>
+                        <option>Active</option>
+                        <option>Inactive</option>
+                    </select>
+                </span>
+            </label>
+            <label class="form-field">
+                <span class="field-label">Created</span>
+                <span class="input-shell"><input id="user-created" class="form-input" type="text" placeholder="4/24/2026" required></span>
+            </label>
+        </div>
+
+        <div class="modal__footer">
+            <button type="button" class="button button--ghost" data-close-user-modal="true">Cancel</button>
+            <button type="submit" class="button button--primary">Save User</button>
+        </div>
+    </form>
+</div>
+{{ dashboard_data.users|json_script:"admin-users-initial-data" }}
 {% endblock %}

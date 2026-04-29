@@ -628,8 +628,9 @@
              data-search="GET /api/coach/dashboard coach dashboard overview_stats alerts upcoming_sessions total_players attendance_week">
             <div><span class="badge get">GET</span><span class="path">/api/coach/dashboard/</span></div>
             <p class="meta">Authenticated approved coach only. Consolidated dashboard payload: overview stats with
-                deltas, derived alert cards (computed on-the-fly, no DB table), and upcoming sessions within the next
-                48 hours. The dashboard local time zone is controlled by <code>APP_LOCAL_TIME_ZONE</code> and defaults
+                deltas, derived alert cards (computed on-the-fly, no DB table), and non-completed sessions that are
+                upcoming or currently inside their scheduled time window. The dashboard local time zone is controlled by
+                <code>APP_LOCAL_TIME_ZONE</code> and defaults
                 to <code>Asia/Jerusalem</code>.</p>
             <div class="grid">
                 <div class="card">
@@ -713,6 +714,7 @@
         { "id": "uuid" }
       ],
       "session_type": "GROUP",
+      "status": "NOT_STARTED",
       "players_count": 14
     }
   ]
@@ -726,7 +728,7 @@
                         <li><code>overview_stats.attention.value</code>: count of CRITICAL alerts.</li>
                         <li><code>alerts[]</code>: top 3, ordered CRITICAL → WARNING → INFO then newest-first. Full count in <code>alerts_total</code>.</li>
                         <li><code>alerts[].severity</code> / <code>alert_type</code>: <code>CRITICAL</code>, <code>WARNING</code>, or <code>INFO</code>.</li>
-                        <li><code>upcoming_sessions[]</code>: sessions with a <code>start_time</code> in the next 48 h, limit 3.</li>
+                        <li><code>upcoming_sessions[]</code>: non-completed sessions before their <code>start_time</code> or between <code>start_time</code> and <code>end_time</code>, plus future sessions that start in the next 48 h, limit 3.</li>
                         <li><code>upcoming_sessions[].session_type</code>: <code>GROUP</code>, <code>TEAM</code>, or <code>INDIVIDUAL</code>.</li>
                         <li><code>upcoming_sessions[].end_time</code>: <code>HH:MM:SS</code> or <code>null</code>.</li>
                         <li><code>upcoming_sessions[].assigned_players</code>: coach's players assigned to the plan.</li>
@@ -1035,9 +1037,13 @@
               "end_time": "10:30:00",
               "intensity": "MEDIUM",
               "location": "Main Field",
-              "squad_size": 20,
-              "coach_note": "Keep pace moderate",
-              "status": "COMPLETED"
+              "notes": "Bring water",
+              "status": "COMPLETED",
+              "lifecycle": {
+                "status": "COMPLETED",
+                "started_at": "2026-04-01T10:00:00+00:00",
+                "ended_at": "2026-04-01T10:30:00+00:00"
+              }
             }
           ]
         }
@@ -1053,13 +1059,14 @@
                         <li><code>start_date</code>, <code>end_date</code>, <code>days[].date</code>, and <code>days[].plans[].sessions[].session_date</code> use <code>YYYY-MM-DD</code>.</li>
                         <li><code>days[].plans[].sessions[].session_type</code>: <code>GROUP</code>, <code>TEAM</code>, or <code>INDIVIDUAL</code>.</li>
                         <li><code>days[].plans[].sessions[].status</code>: lifecycle token <code>NOT_STARTED</code>, <code>IN_PROGRESS</code>, or <code>COMPLETED</code>.</li>
+                        <li><code>days[].plans[].sessions[].lifecycle</code>: nested lifecycle object with <code>status</code>, <code>started_at</code>, and <code>ended_at</code>. Missing lifecycle rows return <code>NOT_STARTED</code> and null timestamps.</li>
                     </ul>
                 </div>
             </div>
         </div>
 
         <div class="endpoint"
-             data-search="GET /api/coach/plans/plan_id detail assigned_players position training_sessions day_label time_range assigned_players_count">
+             data-search="GET /api/coach/plans/plan_id detail assigned_players position training_sessions day_label assigned_players_count">
             <div><span class="badge get">GET</span><span class="path">/api/coach/plans/&lt;plan_id&gt;/</span></div>
             <p class="meta">Authenticated coach only. Returns the plan detail in the same grouped shape used by the
                 plans screen.</p>
@@ -1101,9 +1108,18 @@
           "session_id": "uuid",
           "title": "Strength Training",
           "session_type": "GROUP",
+          "session_date": "2026-04-01",
           "start_time": "16:00:00",
           "end_time": "17:30:00",
-          "time_range": "16:00 - 17:30"
+          "intensity": "MEDIUM",
+          "location": "Main Pitch A",
+          "notes": "Lower body focus",
+          "status": "NOT_STARTED",
+          "lifecycle": {
+            "status": "NOT_STARTED",
+            "started_at": null,
+            "ended_at": null
+          }
         }
       ]
     }
@@ -1118,16 +1134,14 @@
                         <li><code>training_sessions[].sessions[].session_type</code>: <code>GROUP</code>,
                             <code>TEAM</code>, or <code>INDIVIDUAL</code>.
                         </li>
-                        <li><code>training_sessions[].sessions[].time_range</code>: <code>HH:MM - HH:MM</code> or empty
-                            string.
-                        </li>
+                        <li><code>training_sessions[].sessions[].lifecycle</code>: nested lifecycle object with <code>status</code>, <code>started_at</code>, and <code>ended_at</code>.</li>
                     </ul>
                 </div>
             </div>
         </div>
 
         <div class="endpoint"
-             data-search="POST /api/coach/plans create plan sessions assignee_players session_type start_time end_time invalid_player_ids">
+             data-search="POST /api/coach/plans create plan sessions assignee_players session_type intensity start_time end_time location invalid_player_ids">
             <div><span class="badge post">POST</span><span class="path">/api/coach/plans/</span></div>
             <p class="meta">Authenticated coach only. Creates a plan, its sessions, and player assignments in one
                 request.</p>
@@ -1145,6 +1159,8 @@
       "session_type": "GROUP",
       "start_time": "16:00",
       "end_time": "17:30",
+      "intensity": "HIGH",
+      "location": "Main Pitch A",
       "notes": "Lower body focus"
     }
   ],
@@ -1175,6 +1191,8 @@
       "session_type": "GROUP",
       "start_time": "16:00:00",
       "end_time": "17:30:00",
+      "intensity": "HIGH",
+      "location": "Main Pitch A",
       "notes": "Lower body focus"
     }
   ],
@@ -1197,6 +1215,12 @@
   "detail": "Invalid session_type. Use uppercase values.",
   "expected": ["GROUP", "INDIVIDUAL", "TEAM"]
 }</pre>
+                    <p>Invalid <code>intensity</code> includes the accepted values in <code>expected</code>:</p>
+                    <pre>HTTP 400
+{
+  "detail": "Invalid intensity. Use uppercase values.",
+  "expected": ["LOW", "MEDIUM", "HIGH"]
+}</pre>
                 </div>
                 <div class="card">
                     <h4>Expected Values</h4>
@@ -1207,8 +1231,13 @@
                         <li><code>sessions[].start_time</code>, <code>sessions[].end_time</code>: <code>HH:MM</code>;
                             send both together.
                         </li>
+                        <li><code>sessions[].intensity</code>: uppercase only: <code>LOW</code>, <code>MEDIUM</code>,
+                            <code>HIGH</code>. Defaults to <code>MEDIUM</code> when omitted.
+                        </li>
+                        <li><code>sessions[].location</code>: optional text location for the session.</li>
                         <li><code>assignee_players[]</code>: non-empty array of owned player UUID objects.</li>
-                        <li><code>plan.status</code> and created <code>sessions[].session_type</code> return uppercase.
+                        <li><code>plan.status</code>, created <code>sessions[].session_type</code>, and created
+                            <code>sessions[].intensity</code> return uppercase.
                         </li>
                     </ul>
                 </div>
@@ -1300,6 +1329,65 @@
         </div>
 
         <div class="endpoint"
+             data-search="GET /api/coach/plans/sessions session details notes location intensity">
+            <div><span class="badge get">GET</span><span class="path">/api/coach/plans/&lt;plan_id&gt;/sessions/&lt;session_id&gt;/</span>
+            </div>
+            <p class="meta">Authenticated approved coach only; the signed-in coach must be the plan creator. Returns
+                the full session detail payload for a coach session screen.</p>
+            <div class="grid">
+                <div class="card">
+                    <h4>Path Params</h4>
+                    <ul>
+                        <li><code>plan_id</code>: training plan UUID.</li>
+                        <li><code>session_id</code>: training session UUID; must belong to <code>plan_id</code>.</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h4>Response 200</h4>
+                    <pre>{
+  "session_id": "uuid",
+  "plan": {
+    "plan_id": "uuid",
+    "title": "Pre-season Plan",
+    "start_date": "2026-04-01",
+    "end_date": "2026-04-05",
+    "status": "ACTIVE"
+  },
+  "title": "Strength Training",
+  "session_type": "GROUP",
+  "session_date": "2026-04-01",
+  "start_time": "16:00:00",
+  "end_time": "17:30:00",
+  "intensity": "HIGH",
+  "location": "Main Pitch A",
+  "notes": "Lower body focus",
+  "status": "IN_PROGRESS",
+  "lifecycle": {
+    "status": "IN_PROGRESS",
+    "started_at": "2026-04-01T16:00:00+00:00",
+    "ended_at": null
+  }
+}</pre>
+                </div>
+                <div class="card">
+                    <h4>Expected Values</h4>
+                    <ul>
+                        <li><code>session_type</code>: <code>GROUP</code>, <code>TEAM</code>, or <code>INDIVIDUAL</code>.</li>
+                        <li><code>plan.status</code> and <code>intensity</code> return uppercase.</li>
+                        <li><code>start_time</code> and <code>end_time</code> return <code>HH:MM:SS</code> or <code>null</code>.</li>
+                        <li><code>status</code> is the flat lifecycle token kept for compatibility; <code>lifecycle</code> contains the same status plus timestamps.</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h4>Error Responses</h4>
+                    <pre>HTTP 401   unauthenticated
+HTTP 403   authenticated user is not an approved coach or is not the plan creator
+HTTP 404   { "detail": "Session not found in this plan." }</pre>
+                </div>
+            </div>
+        </div>
+
+        <div class="endpoint"
              data-search="POST /api/coach/plans/sessions/start coach session lifecycle start presentPlayerIds attendance IN_PROGRESS">
             <div><span class="badge post">POST</span><span class="path">/api/coach/plans/&lt;plan_id&gt;/sessions/&lt;session_id&gt;/start/</span>
             </div>
@@ -1326,6 +1414,15 @@
                     <h4>Response 200</h4>
                     <pre>{
   "session_id": "uuid",
+  "title": "Strength Training",
+  "session_type": "GROUP",
+  "session_date": "2026-04-01",
+  "start_time": "16:00:00",
+  "end_time": "17:30:00",
+  "intensity": "HIGH",
+  "location": "Main Pitch A",
+  "notes": "Lower body focus",
+  "status": "IN_PROGRESS",
   "lifecycle": {
     "status": "IN_PROGRESS",
     "started_at": "2026-04-16T18:00:00+00:00",
@@ -1384,6 +1481,15 @@ HTTP 409   { "detail": "Session has already been started." }</pre>
                     <h4>Response 200</h4>
                     <pre>{
   "session_id": "uuid",
+  "title": "Strength Training",
+  "session_type": "GROUP",
+  "session_date": "2026-04-01",
+  "start_time": "16:00:00",
+  "end_time": "17:30:00",
+  "intensity": "HIGH",
+  "location": "Main Pitch A",
+  "notes": "Lower body focus",
+  "status": "COMPLETED",
   "lifecycle": {
     "status": "COMPLETED",
     "started_at": "2026-04-16T18:00:00+00:00",
@@ -1434,8 +1540,7 @@ HTTP 409   { "detail": "Session must be in progress to be ended." }</pre>
       "end_time": "19:30:00",
       "intensity": "HIGH",
       "location": "Main Pitch A",
-      "squad_size": 22,
-      "coach_note": "Pressing from the front..."
+      "status": "NOT_STARTED"
     }
   ],
   "weekly_progress": {
@@ -1608,9 +1713,13 @@ HTTP 409   { "detail": "Session must be in progress to be ended." }</pre>
               "end_time": "10:30:00",
               "intensity": "MEDIUM",
               "location": "Main Field",
-              "squad_size": 20,
-              "coach_note": "Keep pace moderate",
-              "status": "COMPLETED"
+              "notes": "Bring water",
+              "status": "COMPLETED",
+              "lifecycle": {
+                "status": "COMPLETED",
+                "started_at": "2026-04-01T10:00:00+00:00",
+                "ended_at": "2026-04-01T10:30:00+00:00"
+              }
             }
           ]
         }
@@ -1628,6 +1737,7 @@ HTTP 409   { "detail": "Session must be in progress to be ended." }</pre>
                         <li><code>session_type</code>: <code>GROUP</code> | <code>TEAM</code> | <code>INDIVIDUAL</code>.</li>
                         <li><code>intensity</code>: <code>LOW</code> | <code>MEDIUM</code> | <code>HIGH</code>.</li>
                         <li><code>status</code>: <code>NOT_STARTED</code> | <code>IN_PROGRESS</code> | <code>COMPLETED</code> | <code>MISSED</code>. <code>MISSED</code> appears when the coach has ended the session and the player was not in the present list.</li>
+                        <li><code>lifecycle.status</code>: raw session lifecycle token <code>NOT_STARTED</code> | <code>IN_PROGRESS</code> | <code>COMPLETED</code>; it does not become <code>MISSED</code>.</li>
                         <li><code>start_time</code> / <code>end_time</code>: <code>HH:MM:SS</code> or <code>null</code>. Clients derive duration from these.</li>
                     </ul>
                 </div>
@@ -1941,7 +2051,7 @@ HTTP 400
         </div>
 
         <div class="endpoint"
-             data-search="GET /api/user-info user info role player coach avatar_url certificate_image position">
+             data-search="GET /api/user-info user info name first_name last_name role player coach avatar_url certificate_image position">
             <div><span class="badge get">GET</span><span class="path">/api/user-info/</span></div>
             <p class="meta">Authenticated. Returns the signed-in user profile summary and role-specific data.</p>
             <div class="grid">
@@ -1950,6 +2060,8 @@ HTTP 400
                     <pre>{
   "id": "uuid",
   "name": "User Name",
+  "first_name": "User",
+  "last_name": "Name",
   "email": "user@example.com",
   "role": "Player",
   "player": {
@@ -1970,6 +2082,8 @@ HTTP 400
                     <pre>{
   "id": "uuid",
   "name": "Coach Name",
+  "first_name": "Coach",
+  "last_name": "Name",
   "email": "coach@example.com",
   "role": "Coach",
   "coach": {
@@ -1991,6 +2105,9 @@ HTTP 400
                     <h4>Expected Values</h4>
                     <ul>
                         <li><code>role</code>: primary role string such as <code>Player</code> or <code>Coach</code>.
+                        </li>
+                        <li><code>first_name</code> and <code>last_name</code>: split name fields; either can be an
+                            empty string.
                         </li>
                         <li><code>player.position</code>: object with <code>id</code>, <code>name</code>,
                             <code>code</code>; <code>avatar_url</code> is always present.

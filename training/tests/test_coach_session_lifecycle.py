@@ -100,6 +100,12 @@ class CoachSessionLifecycleTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data["session_id"], str(self.session.session_id))
+        self.assertEqual(response.data["title"], "Lifecycle Session")
+        self.assertEqual(response.data["session_type"], "GROUP")
+        self.assertEqual(response.data["session_date"], "2026-04-01")
+        self.assertEqual(response.data["status"], "IN_PROGRESS")
+        self.assertNotIn("time_range", response.data)
+        self.assertNotIn("squad_size", response.data)
         self.assertEqual(response.data["lifecycle"]["status"], "IN_PROGRESS")
         self.assertIsNotNone(response.data["lifecycle"]["started_at"])
         self.assertIsNone(response.data["lifecycle"]["ended_at"])
@@ -190,6 +196,7 @@ class CoachSessionLifecycleTests(TestCase):
         response = self.client.post(self.end_url, {}, format="json")
 
         self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["status"], "COMPLETED")
         self.assertEqual(response.data["lifecycle"]["status"], "COMPLETED")
         self.assertIsNotNone(response.data["lifecycle"]["ended_at"])
         self.assertEqual(response.data["present_player_ids"], [str(self.player_a.id)])

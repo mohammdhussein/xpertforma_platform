@@ -3,7 +3,7 @@ from rest_framework import serializers
 from accounts.exceptions import InvalidInputError
 from accounts.serializers.position import PositionSummarySerializer
 from training.models import TrainingPlan, TrainingSession
-from training.statuses import VALID_TRAINING_SESSION_TYPES, parse_training_session_type_api_value
+from training.statuses import Intensity, VALID_TRAINING_SESSION_TYPES, parse_training_session_type_api_value
 from xpertforma_platform.api_fields import UppercaseTokenField
 from xpertforma_platform.api_values import normalize_api_value
 
@@ -32,6 +32,12 @@ class TrainingPlanDetailSerializer(serializers.ModelSerializer):
         fields = ["plan_id", "title", "start_date", "end_date", "status", "total_sessions", "assigned_players_count"]
 
 
+class SessionLifecycleDetailsSerializer(serializers.Serializer):
+    status = UppercaseTokenField()
+    started_at = serializers.DateTimeField(allow_null=True)
+    ended_at = serializers.DateTimeField(allow_null=True)
+
+
 class CoachTrainingPlanRangeSessionSerializer(serializers.Serializer):
     session_id = serializers.UUIDField()
     title = serializers.CharField()
@@ -41,9 +47,9 @@ class CoachTrainingPlanRangeSessionSerializer(serializers.Serializer):
     end_time = serializers.TimeField(allow_null=True)
     intensity = UppercaseTokenField(allow_blank=True, allow_null=True)
     location = serializers.CharField(allow_blank=True)
-    squad_size = serializers.IntegerField(allow_null=True)
-    coach_note = serializers.CharField(allow_blank=True)
+    notes = serializers.CharField(allow_blank=True)
     status = UppercaseTokenField()
+    lifecycle = SessionLifecycleDetailsSerializer()
 
 
 class CoachTrainingPlanRangePlanSerializer(serializers.Serializer):
@@ -68,6 +74,8 @@ class SessionCreateSerializer(serializers.Serializer):
     session_type = serializers.CharField(required=False, default="GROUP")
     start_time = serializers.TimeField(required=False, allow_null=True)
     end_time = serializers.TimeField(required=False, allow_null=True)
+    intensity = serializers.CharField(required=False, default=Intensity.MEDIUM)
+    location = serializers.CharField(max_length=120, required=False, allow_blank=True)
     notes = serializers.CharField(required=False, allow_blank=True)
 
     def validate_session_type(self, value):
@@ -88,6 +96,24 @@ class SessionCreateSerializer(serializers.Serializer):
 
         return parsed
 
+    def validate_intensity(self, value):
+        expected_intensities = list(Intensity.values)
+
+        if value != normalize_api_value(value):
+            raise InvalidInputError(
+                "Invalid intensity. Use uppercase values.",
+                expected=expected_intensities,
+            )
+
+        parsed = normalize_api_value(value)
+        if parsed not in expected_intensities:
+            raise InvalidInputError(
+                "Invalid intensity.",
+                expected=expected_intensities,
+            )
+
+        return parsed
+
     def validate(self, attrs):
         start_time = attrs.get("start_time")
         end_time = attrs.get("end_time")
@@ -104,7 +130,18 @@ class TrainingSessionSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = TrainingSession
-        fields = ["session_id", "plan", "session_date", "title", "session_type", "start_time", "end_time", "notes"]
+        fields = [
+            "session_id",
+            "plan",
+            "session_date",
+            "title",
+            "session_type",
+            "start_time",
+            "end_time",
+            "intensity",
+            "location",
+            "notes",
+        ]
         read_only_fields = ["session_id", "plan", "session_date"]
 
 
@@ -119,9 +156,14 @@ class PlanSessionItemSerializer(serializers.Serializer):
     session_id = serializers.UUIDField()
     title = serializers.CharField()
     session_type = UppercaseTokenField()
+    session_date = serializers.DateField()
     start_time = serializers.TimeField(allow_null=True)
     end_time = serializers.TimeField(allow_null=True)
-    time_range = serializers.CharField()
+    intensity = UppercaseTokenField(allow_blank=True, allow_null=True)
+    location = serializers.CharField(allow_blank=True)
+    notes = serializers.CharField(allow_blank=True)
+    status = UppercaseTokenField()
+    lifecycle = SessionLifecycleDetailsSerializer()
 
 
 class PlanSessionGroupSerializer(serializers.Serializer):
@@ -151,4 +193,3 @@ class TrainingPlanCreateResultSerializer(serializers.Serializer):
 
 class AssignPlayersSerializer(serializers.Serializer):
     player_ids = serializers.ListField(child=serializers.UUIDField(), allow_empty=True)
-

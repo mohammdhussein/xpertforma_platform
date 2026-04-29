@@ -141,6 +141,8 @@ class PlayerHomeEndpointTests(TestCase):
         sessions = response.data["upcoming_sessions"]
         self.assertGreaterEqual(len(sessions), 2)
         self.assertEqual(sessions[0]["title"], "First")
+        self.assertEqual(sessions[0]["status"], "NOT_STARTED")
+        self.assertNotIn("squad_size", sessions[0])
         self.assertEqual(sessions[1]["title"], "Later")
 
     def test_upcoming_sessions_do_not_include_is_today(self):

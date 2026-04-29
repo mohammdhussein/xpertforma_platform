@@ -6,10 +6,9 @@ from django.utils.dateparse import parse_date
 
 from accounts.exceptions import InvalidInputError
 from accounts.serializers.position import build_position_payload
-from training.models import SessionLifecycle, TrainingPlan, TrainingPlanPlayer, TrainingSession
+from training.models import TrainingPlan, TrainingPlanPlayer, TrainingSession
+from training.queries.training_session_details import serialize_training_session_details
 from training.serializers.training_plans import TrainingPlanDetailSerializer
-from training.statuses import to_api_training_session_type
-from xpertforma_platform.api_values import normalize_api_value
 
 MAX_RANGE_DAYS = 31
 
@@ -46,7 +45,7 @@ def build_coach_training_plans_payload(coach_user, *, start_date_str=None, end_d
                     "plan_id": plan_key,
                     "title": plan_titles[plan_key],
                     "sessions": [
-                        _serialize_coach_training_session(session)
+                        serialize_training_session_details(session)
                         for session in plans_map[plan_key]
                     ],
                 }
@@ -97,31 +96,6 @@ def _parse_param_date(value, *, field):
     return parsed
 
 
-def _serialize_coach_training_session(session):
-    lifecycle = getattr(session, "lifecycle", None)
-    status = lifecycle.status if lifecycle else SessionLifecycle.NOT_STARTED
-
-    return {
-        "session_id": str(session.session_id),
-        "title": session.title or "",
-        "session_type": to_api_training_session_type(session.session_type),
-        "session_date": session.session_date.isoformat(),
-        "start_time": session.start_time.isoformat() if session.start_time else None,
-        "end_time": session.end_time.isoformat() if session.end_time else None,
-        "intensity": normalize_api_value(session.intensity),
-        "location": session.location,
-        "squad_size": session.squad_size,
-        "coach_note": session.coach_note,
-        "status": status,
-    }
-
-
-def _build_time_range(start_time, end_time):
-    if not start_time or not end_time:
-        return ""
-    return f"{start_time.strftime('%H:%M')} - {end_time.strftime('%H:%M')}"
-
-
 def _day_label(value):
     return f"{value.strftime('%A')}, {value.strftime('%b')} {value.day}"
 
@@ -152,7 +126,7 @@ def build_training_plan_screen_payload(plan, request):
     grouped_sessions = []
     current_date = None
     current_group = None
-    for session in plan.sessions.all().order_by("session_date", "start_time"):
+    for session in plan.sessions.select_related("lifecycle").all().order_by("session_date", "start_time"):
         if session.session_date != current_date:
             current_date = session.session_date
             current_group = {
@@ -163,14 +137,7 @@ def build_training_plan_screen_payload(plan, request):
             grouped_sessions.append(current_group)
 
         current_group["sessions"].append(
-            {
-                "session_id": session.session_id,
-                "title": session.title or plan.title,
-                "session_type": to_api_training_session_type(session.session_type),
-                "start_time": session.start_time,
-                "end_time": session.end_time,
-                "time_range": _build_time_range(session.start_time, session.end_time),
-            }
+            serialize_training_session_details(session, title_fallback=plan.title)
         )
 
     return {

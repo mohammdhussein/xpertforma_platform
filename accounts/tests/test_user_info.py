@@ -28,6 +28,9 @@ class UserInfoTests(TestCase):
         response = self.client.get("/api/user-info/")
 
         self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["name"], "Seen Player")
+        self.assertEqual(response.data["first_name"], "Seen")
+        self.assertEqual(response.data["last_name"], "Player")
         self.assertEqual(
             response.data["player"]["position"],
             {"id": self.striker.id, "name": self.striker.name, "code": self.striker.code},
@@ -57,6 +60,9 @@ class UserInfoTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data["role"], "Coach")
+        self.assertEqual(response.data["name"], "Coach Info")
+        self.assertEqual(response.data["first_name"], "Coach")
+        self.assertEqual(response.data["last_name"], "Info")
         self.assertEqual(
             response.data["coach"],
             {

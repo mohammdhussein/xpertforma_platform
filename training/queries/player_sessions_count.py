@@ -11,7 +11,6 @@ from training.models import (
     TrainingSession,
 )
 
-
 DATE_FORMAT = "YYYY-MM-DD"
 MAX_RANGE_DAYS = 31
 
@@ -56,11 +55,11 @@ def build_player_sessions_count_payload(player_user, *, start_date_str, end_date
             day = row["session__session_date"]
             if row["status"] == SessionLifecycle.COMPLETED:
                 completed_lifecycle_by_date[day] = (
-                    completed_lifecycle_by_date.get(day, 0) + row["n"]
+                        completed_lifecycle_by_date.get(day, 0) + row["n"]
                 )
             elif row["status"] == SessionLifecycle.IN_PROGRESS:
                 in_progress_lifecycle_by_date[day] = (
-                    in_progress_lifecycle_by_date.get(day, 0) + row["n"]
+                        in_progress_lifecycle_by_date.get(day, 0) + row["n"]
                 )
 
         attendance_rows = (

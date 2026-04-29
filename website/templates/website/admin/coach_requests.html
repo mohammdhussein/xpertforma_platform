@@ -17,12 +17,22 @@
 {% block page_content %}
     <section class="summary-grid" aria-label="Request summary">
         <article class="summary-card">
-            <span class="summary-card__label">Pending Requests</span>
-            <strong id="pending-count" class="summary-card__value">0</strong>
+            <span class="summary-card__icon summary-card__icon--amber" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg>
+            </span>
+            <span class="stat-card__content">
+                <span class="summary-card__label">Pending Requests</span>
+                <strong id="pending-count" class="summary-card__value">0</strong>
+            </span>
         </article>
         <article class="summary-card">
-            <span class="summary-card__label">Approved Coaches</span>
-            <strong id="approved-count" class="summary-card__value">0</strong>
+            <span class="summary-card__icon summary-card__icon--blue" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>
+            </span>
+            <span class="stat-card__content">
+                <span class="summary-card__label">Approved Coaches</span>
+                <strong id="approved-count" class="summary-card__value">0</strong>
+            </span>
         </article>
     </section>
 

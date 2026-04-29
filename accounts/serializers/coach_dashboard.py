@@ -77,6 +77,7 @@ class CoachUpcomingSessionSerializer(serializers.Serializer):
     location = serializers.CharField(allow_blank=True)
     assigned_players = AssignedPlayerSerializer(many=True)
     session_type = UppercaseTokenField()
+    status = UppercaseTokenField()
     players_count = serializers.IntegerField()
 
 

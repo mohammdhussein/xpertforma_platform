@@ -74,7 +74,6 @@ class CoachTrainingPlanValidationTests(TestCase):
             end_time=time(11, 0),
             location="Main Field",
             squad_size=18,
-            coach_note="High tempo",
         )
         TrainingPlanPlayer.objects.create(plan=plan, player=self.player, assigned_by=self.coach)
         SessionLifecycle.objects.create(session=session, status=SessionLifecycle.COMPLETED)
@@ -101,9 +100,13 @@ class CoachTrainingPlanValidationTests(TestCase):
                 "end_time": "11:00:00",
                 "intensity": "MEDIUM",
                 "location": "Main Field",
-                "squad_size": 18,
-                "coach_note": "High tempo",
+                "notes": "",
                 "status": "COMPLETED",
+                "lifecycle": {
+                    "status": "COMPLETED",
+                    "started_at": None,
+                    "ended_at": None,
+                },
             },
         )
 
@@ -288,8 +291,83 @@ class CoachTrainingPlanValidationTests(TestCase):
         self.assertEqual(len(response.data["training_sessions"]), 2)
         self.assertEqual(response.data["training_sessions"][0]["day_label"], "Wednesday, Apr 1")
         self.assertEqual(len(response.data["training_sessions"][0]["sessions"]), 2)
-        self.assertEqual(response.data["training_sessions"][0]["sessions"][0]["session_type"], "GROUP")
-        self.assertEqual(response.data["training_sessions"][0]["sessions"][0]["time_range"], "16:00 - 17:30")
+        first_session = response.data["training_sessions"][0]["sessions"][0]
+        self.assertEqual(first_session["session_type"], "GROUP")
+        self.assertEqual(first_session["session_date"], "2026-04-01")
+        self.assertEqual(first_session["intensity"], "MEDIUM")
+        self.assertEqual(first_session["location"], "")
+        self.assertEqual(first_session["notes"], "")
+        self.assertEqual(first_session["status"], "NOT_STARTED")
+        self.assertNotIn("time_range", first_session)
+        self.assertNotIn("squad_size", first_session)
+        self.assertEqual(
+            first_session["lifecycle"],
+            {
+                "status": "NOT_STARTED",
+                "started_at": None,
+                "ended_at": None,
+            },
+        )
+
+    def test_create_accepts_session_location_and_intensity(self):
+        response = self.client.post(
+            "/api/coach/plans/",
+            {
+                "title": "Pre-season Plan",
+                "start_date": "2026-04-01",
+                "end_date": "2026-04-05",
+                "sessions": [
+                    {
+                        "date": "2026-04-01",
+                        "title": "Strength Training",
+                        "session_type": "GROUP",
+                        "start_time": "16:00",
+                        "end_time": "17:30",
+                        "intensity": "HIGH",
+                        "location": "Main Pitch A",
+                        "notes": "Lower body focus",
+                    }
+                ],
+                "assignee_players": [{"id": str(self.player.id)}],
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 201)
+        session = TrainingSession.objects.get()
+        self.assertEqual(session.intensity, "HIGH")
+        self.assertEqual(session.location, "Main Pitch A")
+        self.assertEqual(response.data["sessions"][0]["intensity"], "HIGH")
+        self.assertEqual(response.data["sessions"][0]["location"], "Main Pitch A")
+
+    def test_rejects_lowercase_intensity(self):
+        response = self.client.post(
+            "/api/coach/plans/",
+            {
+                "title": "Bad Intensity Plan",
+                "start_date": "2026-04-01",
+                "end_date": "2026-04-02",
+                "sessions": [
+                    {
+                        "date": "2026-04-01",
+                        "title": "Session A",
+                        "session_type": "GROUP",
+                        "intensity": "high",
+                    }
+                ],
+                "assignee_players": [{"id": str(self.player.id)}],
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(
+            response.data,
+            {
+                "detail": "Invalid intensity. Use uppercase values.",
+                "expected": ["LOW", "MEDIUM", "HIGH"],
+            },
+        )
 
     def test_rejects_lowercase_session_type(self):
         response = self.client.post(

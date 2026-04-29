@@ -10,12 +10,13 @@ from training.models import (
     TrainingPlanPlayer,
     TrainingSession,
 )
+from training.queries.training_session_details import (
+    get_session_lifecycle,
+    serialize_training_session_details,
+)
 from training.statuses import (
     derive_session_player_status_api_value,
-    to_api_training_session_type,
 )
-from xpertforma_platform.api_values import normalize_api_value
-
 
 MAX_RANGE_DAYS = 31
 
@@ -46,19 +47,13 @@ def build_player_training_payload(player_user, *, start_date_str, end_date_str):
                 session_date__gte=start_date,
                 session_date__lte=end_date,
             )
-            .select_related("plan")
+            .select_related("plan", "lifecycle")
             .order_by("session_date", "plan__title", "start_time")
         )
 
-    lifecycle_map: dict = {}
     attendance_set: set = set()
     if sessions:
         session_ids = [s.session_id for s in sessions]
-        lifecycle_map = dict(
-            SessionLifecycle.objects
-            .filter(session_id__in=session_ids)
-            .values_list("session_id", "status")
-        )
         attendance_set = set(
             SessionAttendance.objects
             .filter(player=player_user, session_id__in=session_ids)
@@ -82,7 +77,7 @@ def build_player_training_payload(player_user, *, start_date_str, end_date_str):
                 "plan_id": plan_key,
                 "title": plan_titles[plan_key],
                 "sessions": [
-                    _serialize_session(s, lifecycle_map, attendance_set)
+                    _serialize_session(s, attendance_set)
                     for s in plans_map[plan_key]
                 ],
             })
@@ -108,25 +103,18 @@ def _parse_param_date(value: str | None, *, field: str) -> dt_date:
 
 
 def _serialize_session(
-    session: TrainingSession,
-    lifecycle_map: dict,
-    attendance_set: set,
+        session: TrainingSession,
+        attendance_set: set,
 ) -> dict:
-    lifecycle_status = lifecycle_map.get(session.session_id, SessionLifecycle.NOT_STARTED)
+    lifecycle = get_session_lifecycle(session)
+    lifecycle_status = lifecycle.status if lifecycle else SessionLifecycle.NOT_STARTED
     has_attendance = session.session_id in attendance_set
+    player_status = derive_session_player_status_api_value(
+        lifecycle_status, has_attendance=has_attendance,
+    )
 
-    return {
-        "session_id": str(session.session_id),
-        "title": session.title or "",
-        "session_type": to_api_training_session_type(session.session_type),
-        "session_date": session.session_date.isoformat(),
-        "start_time": session.start_time.isoformat() if session.start_time else None,
-        "end_time": session.end_time.isoformat() if session.end_time else None,
-        "intensity": normalize_api_value(session.intensity),
-        "location": session.location,
-        "squad_size": session.squad_size,
-        "coach_note": session.coach_note,
-        "status": derive_session_player_status_api_value(
-            lifecycle_status, has_attendance=has_attendance,
-        ),
-    }
+    return serialize_training_session_details(
+        session,
+        lifecycle=lifecycle,
+        status=player_status,
+    )

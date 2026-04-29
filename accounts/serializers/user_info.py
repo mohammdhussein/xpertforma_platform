@@ -22,6 +22,8 @@ class PlayerUserInfoSerializer(serializers.Serializer):
 class UserInfoSerializer(serializers.Serializer):
     id = serializers.UUIDField()
     name = serializers.CharField()
+    first_name = serializers.CharField(allow_blank=True)
+    last_name = serializers.CharField(allow_blank=True)
     email = serializers.EmailField()
     role = serializers.CharField()
 

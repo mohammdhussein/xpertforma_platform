@@ -9,6 +9,7 @@ from training.views.coach_session_lifecycle import (
     CoachSessionEndAPIView,
     CoachSessionStartAPIView,
 )
+from training.views.coach_session_details import CoachSessionDetailsAPIView
 from training.views.coach_training_plans import CoachTrainingPlanViewSet
 
 router = DefaultRouter()
@@ -20,6 +21,11 @@ urlpatterns = [
     path("coach/players/", CoachPlayersListAPIView.as_view(), name="coach-players-list"),
     path("coach/players/<uuid:player_id>/", CoachPlayerProfileAPIView.as_view(), name="coach-player-detail"),
     path("coach/players/<uuid:player_id>/state/", CoachPlayerStateAPIView.as_view(), name="coach-player-state"),
+    path(
+        "coach/plans/<uuid:plan_id>/sessions/<uuid:session_id>/",
+        CoachSessionDetailsAPIView.as_view(),
+        name="coach-session-details",
+    ),
     path(
         "coach/plans/<uuid:plan_id>/sessions/<uuid:session_id>/start/",
         CoachSessionStartAPIView.as_view(),

@@ -9,6 +9,7 @@ from training.models import (
     TrainingPlanPlayer,
     TrainingSession,
 )
+from training.queries.training_session_details import serialize_training_session_details
 
 
 def _get_session_or_404(plan_id, session_id) -> TrainingSession:
@@ -36,14 +37,6 @@ def _assigned_player_ids(plan_id) -> set:
     )
 
 
-def _serialize_lifecycle(lifecycle: SessionLifecycle) -> dict:
-    return {
-        "status": lifecycle.status.upper(),
-        "started_at": lifecycle.started_at.isoformat() if lifecycle.started_at else None,
-        "ended_at": lifecycle.ended_at.isoformat() if lifecycle.ended_at else None,
-    }
-
-
 def _build_response(session: TrainingSession, lifecycle: SessionLifecycle) -> dict:
     assigned_ids = _assigned_player_ids(session.plan_id)
     present_ids = set(
@@ -53,8 +46,7 @@ def _build_response(session: TrainingSession, lifecycle: SessionLifecycle) -> di
     )
     missed_ids = assigned_ids - present_ids
     return {
-        "session_id": str(session.session_id),
-        "lifecycle": _serialize_lifecycle(lifecycle),
+        **serialize_training_session_details(session, title_fallback=session.plan.title, lifecycle=lifecycle),
         "present_player_ids": sorted(str(pid) for pid in present_ids),
         "missed_player_ids": sorted(str(pid) for pid in missed_ids),
     }
