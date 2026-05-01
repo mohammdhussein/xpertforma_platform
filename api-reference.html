@@ -1623,6 +1623,104 @@ HTTP 409   { "detail": "Session must be in progress to be ended." }</pre>
         </div>
 
         <div class="endpoint"
+             data-search="GET /api/player/performance player performance days sessions effort intensity recovery consistency start_date end_date">
+            <div><span class="badge get">GET</span><span class="path">/api/player/performance/</span></div>
+            <p class="meta">Authenticated player only. Returns the selected date range as daily performance items. The
+                response contains only <code>days</code>.</p>
+            <div class="grid">
+                <div class="card">
+                    <h4>Query Params</h4>
+                    <ul>
+                        <li><code>start_date</code>: required, format <code>YYYY-MM-DD</code>.</li>
+                        <li><code>end_date</code>: required, format <code>YYYY-MM-DD</code>.</li>
+                        <li>The inclusive range must satisfy <code>start_date &lt;= end_date</code> and span at most
+                            <strong>31 days</strong>.
+                        </li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h4>Response 200</h4>
+                    <pre>{
+  "days": [
+    {
+      "date": "2026-04-19",
+      "score": 80,
+      "sessions": {
+        "completed": 1,
+        "planned": 1,
+        "percentage": 100
+      },
+      "effort": {
+        "percentage": 100,
+        "source": "INTENSITY_WEIGHTED_SESSION_COMPLETION"
+      },
+      "recovery": {
+        "percentage": 78,
+        "source": "PLAYER_CHECKINS"
+      },
+      "consistency": {
+        "percentage": 80,
+        "streak_days": 3
+      }
+    }
+  ]
+}</pre>
+                </div>
+                <div class="card">
+                    <h4>Calculation Notes</h4>
+                    <ul>
+                        <li><code>sessions.planned</code>: sessions from plans assigned through
+                            <code>TrainingPlanPlayer</code> within the selected range.
+                        </li>
+                        <li><code>sessions.completed</code>: session lifecycle is <code>COMPLETED</code> and the
+                            player has a <code>SessionAttendance</code> row for the session.
+                        </li>
+                        <li><code>effort.percentage</code>: completed intensity points divided by planned intensity
+                            points. Weights are <code>LOW=1</code>, <code>MEDIUM=2</code>, <code>HIGH=3</code>.
+                        </li>
+                        <li><code>recovery.percentage</code>: daily <code>PlayerCheckin.readiness_score</code>, falling
+                            back to selected-range average readiness, then <code>0</code>.
+                        </li>
+                        <li><code>consistency.percentage</code>: total completed sessions in the range divided by total
+                            planned sessions in the range.
+                        </li>
+                        <li><code>consistency.streak_days</code>: <code>WeeklyLoad.streak_days</code> for the Monday
+                            week containing <code>start_date</code>, or calculated consecutive completed training days.
+                        </li>
+                        <li>All percentages and scores are rounded to the nearest integer and clamped between
+                            <code>0</code> and <code>100</code>.
+                        </li>
+                        <li>When a day has planned sessions, score uses
+                            <code>50% effort + 35% recovery + 15% consistency</code>. When no sessions are planned,
+                            score uses <code>70% recovery + 30% consistency</code>.
+                        </li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h4>Error Responses</h4>
+                    <pre>HTTP 400
+{
+  "detail": "start_date is required.",
+  "expected": ["YYYY-MM-DD"]
+}
+
+HTTP 400
+{
+  "detail": "end_date is required.",
+  "expected": ["YYYY-MM-DD"]
+}
+
+HTTP 400
+{ "detail": "start_date must be less than or equal to end_date." }
+
+HTTP 400
+{ "detail": "Date range must not exceed 31 days." }</pre>
+                    <p><code>401</code>: unauthenticated. <code>403</code>: authenticated non-player.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="endpoint"
              data-search="GET PATCH PUT /api/player/profile player profile onboarding height_cm weight_kg date_of_birth phone foot login_status team_id avatar_url position">
             <div><span class="badge get">GET</span><span class="badge patch">PATCH</span><span
                     class="badge put">PUT</span><span class="path">/api/player/profile/</span></div>
