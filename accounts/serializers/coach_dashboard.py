@@ -1,5 +1,6 @@
 from rest_framework import serializers
 
+from accounts.serializers.position import PositionSummarySerializer
 from xpertforma_platform.api_fields import UppercaseTokenField
 
 
@@ -35,6 +36,7 @@ class OverviewStatsSerializer(serializers.Serializer):
 class AlertRelatedPlayerSerializer(serializers.Serializer):
     id = serializers.UUIDField()
     name = serializers.CharField()
+    position = PositionSummarySerializer()
     avatar_url = serializers.CharField(allow_null=True)
 
 

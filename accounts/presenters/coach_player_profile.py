@@ -99,7 +99,7 @@ def build_coach_insights(
     return sentences
 
 
-def build_plan_payloads(plans, sessions_by_plan, progress_map, progress_row_map, *, now):
+def build_plan_payloads(plans, sessions_by_plan, progress_map, activity_dt_map, *, now):
     plans_out = []
     plans_done = 0
 
@@ -116,9 +116,9 @@ def build_plan_payloads(plans, sessions_by_plan, progress_map, progress_row_map,
 
         latest_progress_dt = max(
             (
-                progress_row_map[session.session_id].updated_at
+                activity_dt_map[session.session_id]
                 for session in plan_sessions
-                if session.session_id in progress_row_map
+                if activity_dt_map.get(session.session_id) is not None
             ),
             default=None,
         )

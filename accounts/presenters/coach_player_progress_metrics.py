@@ -3,9 +3,18 @@ from datetime import timedelta
 
 from training.statuses import is_completed_player_session_status
 
+FINAL_PLAYER_SESSION_STATUSES = {"COMPLETED", "MISSED"}
+
+
+def is_final_player_session_status(value):
+    return value in FINAL_PLAYER_SESSION_STATUSES
+
 
 def calculate_completion_rate(sessions, progress_map):
-    total = len(sessions)
+    total = sum(
+        1 for session in sessions
+        if progress_map.get(session.session_id) is not None
+    )
     if total == 0:
         return 0
     completed = sum(1 for session in sessions if is_completed_player_session_status(progress_map.get(session.session_id)))
@@ -23,7 +32,8 @@ def calculate_trend_label(current_rate, previous_rate):
 def _scheduled_day_completion(sessions, progress_map, *, today):
     sessions_by_day = defaultdict(list)
     for session in sessions:
-        if session.session_date <= today:
+        status = progress_map.get(session.session_id)
+        if session.session_date <= today and is_final_player_session_status(status):
             sessions_by_day[session.session_date].append(session)
 
     day_completion = []
@@ -125,16 +135,26 @@ def build_performance_metrics(latest_snapshot):
 
 
 def calculate_progress_summary(sessions, progress_map):
-    total_sessions_count = len(sessions)
+    total_sessions_count = sum(
+        1 for session in sessions
+        if progress_map.get(session.session_id) is not None
+    )
     completed_sessions_count = sum(
-        1 for session in sessions if is_completed_player_session_status(progress_map.get(session.session_id))
+        1 for session in sessions
+        if is_completed_player_session_status(progress_map.get(session.session_id))
     )
     progress_rate = int((completed_sessions_count / total_sessions_count) * 100) if total_sessions_count else 0
     return total_sessions_count, progress_rate
 
 
 def calculate_attendance_summary(sessions, progress_map, *, today):
-    past_sessions = [session for session in sessions if session.session_date <= today]
+    past_sessions = [
+        session for session in sessions
+        if (
+            session.session_date <= today
+            and is_final_player_session_status(progress_map.get(session.session_id))
+        )
+    ]
     attendance_total = len(past_sessions)
     attendance_completed = sum(
         1 for session in past_sessions if is_completed_player_session_status(progress_map.get(session.session_id))

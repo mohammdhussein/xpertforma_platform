@@ -62,10 +62,10 @@ def build_coach_dashboard_payload(coach_user, *, now) -> dict:
 
     # --- overview_stats.total_players ---
     total_all = player_profiles.count()
-    active_count = player_profiles.filter(state="ACTIVE").count()
     month_start = today.replace(day=1)
     delta_value = PlayerProfile.objects.filter(
-        coach=coach_user, state="ACTIVE", user__created_at__date__gte=month_start
+        coach=coach_user,
+        user__created_at__date__gte=month_start,
     ).count()
 
     # --- overview_stats.sessions_today ---
@@ -97,32 +97,29 @@ def build_coach_dashboard_payload(coach_user, *, now) -> dict:
 
     # --- overview_stats.attention + alerts ---
     all_alerts, total_alerts = build_coach_alerts(coach_user, limit=None, now=now)
-    critical_count = sum(1 for a in all_alerts if a["severity"] == "CRITICAL")
+    critical_count = sum(
+        max(1, len(a["related_players"]))
+        for a in all_alerts
+        if a["severity"] == "CRITICAL"
+    )
     attn_pct = round(critical_count / total_all * 100) if total_all > 0 else 0
     top_alerts = all_alerts[:3]
 
-    # --- upcoming_sessions (current session + 48h window) ---
+    # --- upcoming_sessions (future not-started sessions in the next 48h) ---
     deadline = now + timedelta(hours=48)
     deadline_date = deadline.date()
     deadline_time = deadline.time()
-    active_or_upcoming_window = (
+    upcoming_window = (
         Q(session_date__gt=today)
         | Q(session_date=today, start_time__gte=current_time)
-        | Q(session_date=today, start_time__lte=current_time, end_time__gte=current_time)
-        | Q(
-            session_date=today,
-            start_time__lte=current_time,
-            end_time__isnull=True,
-            lifecycle__status=SessionLifecycle.IN_PROGRESS,
-        )
     )
 
     upcoming_qs = list(
         TrainingSession.objects
         .filter(plan_id__in=plan_ids, start_time__isnull=False)
-        .filter(active_or_upcoming_window)
+        .filter(upcoming_window)
         .filter(Q(session_date__lt=deadline_date) | Q(session_date=deadline_date, start_time__lte=deadline_time))
-        .filter(Q(lifecycle__isnull=True) | ~Q(lifecycle__status=SessionLifecycle.COMPLETED))
+        .filter(Q(lifecycle__isnull=True) | Q(lifecycle__status=SessionLifecycle.NOT_STARTED))
         .select_related("plan", "lifecycle")
         .order_by("session_date", "start_time")[:UPCOMING_SESSIONS_LIMIT]
     )
@@ -166,7 +163,7 @@ def build_coach_dashboard_payload(coach_user, *, now) -> dict:
     return {
         "overview_stats": {
             "total_players": {
-                "value": active_count,
+                "value": total_all,
                 "delta_value": delta_value,
             },
             "sessions_today": {

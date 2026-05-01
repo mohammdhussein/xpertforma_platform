@@ -4,14 +4,28 @@ from accounts.models import PlayerPerformanceSnapshot
 from accounts.presenters.coach_player_progress_metrics import (
     calculate_attendance_summary,
     calculate_focus_area,
-    calculate_progress_summary,
+    is_final_player_session_status,
 )
+from accounts.services.coach_player_session_status import build_coach_player_session_status_maps
 from accounts.statuses import PLAYER_STATE_INJURED
-from training.models import PlayerSessionProgress, TrainingPlanPlayer, TrainingSession
-from training.statuses import (
-    is_completed_player_session_status,
-    normalize_player_session_status,
-)
+from training.models import TrainingPlanPlayer, TrainingSession
+from training.statuses import is_completed_player_session_status
+
+
+def calculate_attention_progress_summary(sessions, progress_map):
+    reviewable_sessions = [
+        session for session in sessions
+        if is_final_player_session_status(progress_map.get(session.session_id))
+    ]
+    total = len(reviewable_sessions)
+    if total == 0:
+        return 0, 0
+
+    completed = sum(
+        1 for session in reviewable_sessions
+        if is_completed_player_session_status(progress_map.get(session.session_id))
+    )
+    return total, int((completed / total) * 100)
 
 
 def build_coach_player_attention_items(
@@ -108,15 +122,9 @@ def build_coach_player_attention_summary(player_profile, *, now=None):
         .order_by("-session_date", "-start_time", "-session_id")
     )
     session_ids = [session.session_id for session in sessions]
-    progress_rows = list(
-        PlayerSessionProgress.objects.filter(player=player, session_id__in=session_ids).order_by("-updated_at")
-    )
-    progress_map = {
-        progress.session_id: normalize_player_session_status(progress.status)
-        for progress in progress_rows
-    }
+    progress_map, _ = build_coach_player_session_status_maps(player, session_ids)
 
-    total_sessions_count, progress_rate = calculate_progress_summary(sessions, progress_map)
+    total_sessions_count, progress_rate = calculate_attention_progress_summary(sessions, progress_map)
     past_sessions, _, attendance_total, attendance_rate = calculate_attendance_summary(
         sessions,
         progress_map,

@@ -86,7 +86,12 @@ class UserRole(models.Model):
 # accounts/models.py
 class CoachProfile(models.Model):
     user = models.OneToOneField("accounts.User", on_delete=models.CASCADE, related_name="coach_profile")
-    certificate_image = models.ImageField(upload_to="coach_certificates/", null=True, blank=True)
+    certificate_image = models.ImageField(
+        upload_to="coach_certificates/",
+        max_length=500,
+        null=True,
+        blank=True,
+    )
     phone_number = models.CharField(max_length=32, null=True, blank=True)
     approval_status = models.CharField(max_length=20, default="PENDING")  # pending/approved/rejected
     approved_at = models.DateTimeField(null=True, blank=True)
