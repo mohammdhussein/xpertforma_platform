@@ -13,7 +13,14 @@ from accounts.models import (
     User,
     UserRole,
 )
-from training.models import PlayerSessionProgress, TrainingPlan, TrainingPlanPlayer, TrainingSession
+from training.models import (
+    PlayerSessionProgress,
+    SessionAttendance,
+    SessionLifecycle,
+    TrainingPlan,
+    TrainingPlanPlayer,
+    TrainingSession,
+)
 
 
 class CoachPlayersListTests(TestCase):
@@ -97,6 +104,40 @@ class CoachPlayersListTests(TestCase):
         self.assertEqual(response.data["players"][0]["id"], str(self.player_one.id))
         self.assertEqual(response.data["players"][0]["state"], "INJURED")
         self.assertTrue(response.data["players"][0]["needs_attention"])
+
+    def test_not_started_training_does_not_mark_active_player_needing_attention(self):
+        today = timezone.localdate()
+        plan = TrainingPlan.objects.create(
+            creator=self.coach,
+            title="Build Up Play",
+            start_date=today - timedelta(days=1),
+            end_date=today + timedelta(days=7),
+            status="DRAFT",
+        )
+        TrainingPlanPlayer.objects.create(plan=plan, player=self.player_two, assigned_by=self.coach)
+        session = TrainingSession.objects.create(
+            plan=plan,
+            title="Shape Walkthrough",
+            session_date=today,
+            session_type=TrainingSession.SESSION_TYPE_TEAM,
+            start_time=time(15, 0),
+            end_time=time(16, 0),
+        )
+        PlayerSessionProgress.objects.create(
+            player=self.player_two,
+            session=session,
+            status="NOT_STARTED",
+        )
+        SessionLifecycle.objects.create(session=session, status=SessionLifecycle.NOT_STARTED)
+
+        response = self.client.get("/api/coach/players/")
+
+        self.assertEqual(response.status_code, 200)
+        player_two = next(
+            player for player in response.data["players"]
+            if player["id"] == str(self.player_two.id)
+        )
+        self.assertFalse(player_two["needs_attention"])
 
     def test_players_endpoint_rejects_lowercase_state_tab(self):
         response = self.client.get("/api/coach/players/?tab=needs_attention")
@@ -239,9 +280,9 @@ class CoachPlayersListTests(TestCase):
         self.assertEqual(
             response.data["overview"]["keyMetrics"],
             {
-                "progressRate": {"value": 60, "trend": "DOWN"},
-                "attendance": {"completed": 3, "total": 4, "rate": 75},
-                "consistency": {"streakDays": 0},
+                "progressRate": {"value": 75, "trend": "DOWN"},
+                "attendance": {"completed": 3, "total": 3, "rate": 100},
+                "consistency": {"streakDays": 3},
                 "focusArea": {"name": "Endurance", "trend": "DOWN"},
             },
         )
@@ -254,11 +295,6 @@ class CoachPlayersListTests(TestCase):
                     "severity": "CRITICAL",
                 },
                 {
-                    "id": "missed_last_session",
-                    "message": "Missed last training session",
-                    "severity": "WARNING",
-                },
-                {
                     "id": "declining_focus_area",
                     "message": "Recent performance is declining in endurance",
                     "severity": "INFO",
@@ -268,14 +304,6 @@ class CoachPlayersListTests(TestCase):
         self.assertEqual(
             response.data["overview"]["recentActivity"],
             [
-                {
-                    "id": str(tactics_session.session_id),
-                    "title": "Team Tactics",
-                    "date": str(today - timedelta(days=1)),
-                    "startTime": "16:30",
-                    "endTime": "18:00",
-                    "status": "MISSED",
-                },
                 {
                     "id": str(shooting_session.session_id),
                     "title": "Shooting Practice",
@@ -292,16 +320,23 @@ class CoachPlayersListTests(TestCase):
                     "endTime": "17:30",
                     "status": "COMPLETED",
                 },
+                {
+                    "id": str(completed_plan_session.session_id),
+                    "title": "Finishing Session",
+                    "date": str(today - timedelta(days=10)),
+                    "startTime": "10:00",
+                    "endTime": "11:00",
+                    "status": "COMPLETED",
+                },
             ],
         )
         self.assertEqual(
             response.data["overview"]["coachInsights"],
             [
-                "Attendance is moderate and consistency can improve.",
-                "The player is making steady progress across assigned plans.",
+                "Attendance is high and the player is consistent with scheduled training.",
+                "The player is showing strong progress across assigned plans.",
                 "Current focus area is Endurance.",
                 "Recent performance in Endurance is declining.",
-                "The most recent scheduled session was missed.",
             ],
         )
         self.assertEqual(
@@ -388,6 +423,83 @@ class CoachPlayersListTests(TestCase):
             },
         )
         self.assertEqual(response.data["plans"], [])
+
+    def test_player_profile_endpoint_uses_session_lifecycle_and_attendance_data(self):
+        today = timezone.localdate()
+        plan = TrainingPlan.objects.create(
+            creator=self.coach,
+            title="Match Prep",
+            start_date=today - timedelta(days=3),
+            end_date=today + timedelta(days=3),
+            status="DRAFT",
+        )
+        TrainingPlanPlayer.objects.create(plan=plan, player=self.player_two, assigned_by=self.coach)
+        attended_session = TrainingSession.objects.create(
+            plan=plan,
+            title="Pressing Drill",
+            session_date=today - timedelta(days=2),
+            session_type=TrainingSession.SESSION_TYPE_GROUP,
+            start_time=time(10, 0),
+            end_time=time(11, 0),
+        )
+        missed_session = TrainingSession.objects.create(
+            plan=plan,
+            title="Recovery Run",
+            session_date=today - timedelta(days=1),
+            session_type=TrainingSession.SESSION_TYPE_GROUP,
+            start_time=time(12, 0),
+            end_time=time(13, 0),
+        )
+        SessionLifecycle.objects.create(
+            session=attended_session,
+            status=SessionLifecycle.COMPLETED,
+            ended_at=timezone.now() - timedelta(days=2),
+            ended_by=self.coach,
+        )
+        SessionLifecycle.objects.create(
+            session=missed_session,
+            status=SessionLifecycle.COMPLETED,
+            ended_at=timezone.now() - timedelta(days=1),
+            ended_by=self.coach,
+        )
+        SessionAttendance.objects.create(
+            session=attended_session,
+            player=self.player_two,
+            status=SessionAttendance.PRESENT,
+            marked_by=self.coach,
+        )
+
+        response = self.client.get(f"/api/coach/players/{self.player_two.id}/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.data["overview"]["keyMetrics"]["attendance"],
+            {"completed": 1, "total": 2, "rate": 50},
+        )
+        self.assertEqual(response.data["plans"][0]["progress"], 50)
+        self.assertEqual(response.data["plans"][0]["completedSessions"], 1)
+        self.assertEqual(response.data["plans"][0]["remainingSessions"], 1)
+        self.assertEqual(
+            response.data["overview"]["recentActivity"][:2],
+            [
+                {
+                    "id": str(missed_session.session_id),
+                    "title": "Recovery Run",
+                    "date": str(today - timedelta(days=1)),
+                    "startTime": "12:00",
+                    "endTime": "13:00",
+                    "status": "MISSED",
+                },
+                {
+                    "id": str(attended_session.session_id),
+                    "title": "Pressing Drill",
+                    "date": str(today - timedelta(days=2)),
+                    "startTime": "10:00",
+                    "endTime": "11:00",
+                    "status": "COMPLETED",
+                },
+            ],
+        )
 
     def test_player_profile_endpoint_preserves_custom_focus_area_override(self):
         PlayerPerformanceSnapshot.objects.create(

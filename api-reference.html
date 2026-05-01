@@ -628,8 +628,9 @@
              data-search="GET /api/coach/dashboard coach dashboard overview_stats alerts upcoming_sessions total_players attendance_week">
             <div><span class="badge get">GET</span><span class="path">/api/coach/dashboard/</span></div>
             <p class="meta">Authenticated approved coach only. Consolidated dashboard payload: overview stats with
-                deltas, derived alert cards (computed on-the-fly, no DB table), and non-completed sessions that are
-                upcoming or currently inside their scheduled time window. The dashboard local time zone is controlled by
+                deltas, derived alert cards (computed on-the-fly, no DB table), and not-started sessions that are
+                upcoming in the next 48 hours. Sessions are removed from this list once they become
+                <code>IN_PROGRESS</code>. The dashboard local time zone is controlled by
                 <code>APP_LOCAL_TIME_ZONE</code> and defaults
                 to <code>Asia/Jerusalem</code>.</p>
             <div class="grid">
@@ -658,13 +659,18 @@
   },
   "alerts": [
     {
-      "id": "INJURY_RISK:&lt;uuid&gt;:20260418",
+      "id": "PLAYER_INJURED:20260418",
       "severity": "CRITICAL",
-      "alert_type": "INJURY_RISK",
-      "title": "Injury Risk — Player Name",
-      "description": "High fatigue index for 3 consecutive days. Rest recommended.",
+      "alert_type": "PLAYER_INJURED",
+      "title": "Injured Players",
+      "description": "2 players are currently marked as injured.",
       "related_players": [
-        { "id": "uuid", "name": "Player Name", "avatar_url": null }
+        {
+          "id": "uuid",
+          "name": "Player Name",
+          "position": { "id": 13, "name": "Central Midfielder", "code": "CM" },
+          "avatar_url": null
+        }
       ],
       "related_session": null,
       "related_plan": null,
@@ -676,7 +682,14 @@
       "alert_type": "LOW_ATTENDANCE",
       "title": "Low Attendance — Morning Drill",
       "description": "5 of 12 expected players attended.",
-      "related_players": [],
+      "related_players": [
+        {
+          "id": "uuid",
+          "name": "Absent Player",
+          "position": { "id": 9, "name": "Striker", "code": "ST" },
+          "avatar_url": null
+        }
+      ],
       "related_session": {
         "session_id": "uuid",
         "plan_id": "uuid",
@@ -723,12 +736,14 @@
                 <div class="card">
                     <h4>Expected Values</h4>
                     <ul>
-                        <li><code>overview_stats.total_players.delta_value</code>: ACTIVE players added this calendar month.</li>
+                        <li><code>overview_stats.total_players.value</code>: all players assigned to the coach, including injured players.</li>
+                        <li><code>overview_stats.total_players.delta_value</code>: players added this calendar month, including players later marked injured.</li>
                         <li><code>overview_stats.attendance_week.*_percent</code>: integer 0–100 or <code>null</code> when no sessions exist.</li>
-                        <li><code>overview_stats.attention.value</code>: count of CRITICAL alerts.</li>
+                        <li><code>overview_stats.attention.value</code>: count of players affected by CRITICAL alerts, falling back to one per critical alert when no players are attached.</li>
                         <li><code>alerts[]</code>: top 3, ordered CRITICAL → WARNING → INFO then newest-first. Full count in <code>alerts_total</code>.</li>
-                        <li><code>alerts[].severity</code> / <code>alert_type</code>: <code>CRITICAL</code>, <code>WARNING</code>, or <code>INFO</code>.</li>
-                        <li><code>upcoming_sessions[]</code>: non-completed sessions before their <code>start_time</code> or between <code>start_time</code> and <code>end_time</code>, plus future sessions that start in the next 48 h, limit 3.</li>
+                        <li><code>alerts[].severity</code>: <code>CRITICAL</code>, <code>WARNING</code>, or <code>INFO</code>. Known alert types include <code>PLAYER_INJURED</code>, <code>FATIGUE_RISK</code>, <code>LOW_ATTENDANCE</code>, and <code>PLAN_UPDATED</code>.</li>
+                        <li><code>alerts[].related_players[]</code>: player objects with <code>position</code> and <code>avatar_url</code>. Injured players are grouped into one <code>PLAYER_INJURED</code> alert; low-attendance alerts are calculated from completed sessions in the last 30 days and include absent players when known.</li>
+                        <li><code>upcoming_sessions[]</code>: not-started sessions with a future <code>start_time</code> in the next 48 h, limit 3. <code>IN_PROGRESS</code> and <code>COMPLETED</code> sessions are excluded.</li>
                         <li><code>upcoming_sessions[].session_type</code>: <code>GROUP</code>, <code>TEAM</code>, or <code>INDIVIDUAL</code>.</li>
                         <li><code>upcoming_sessions[].end_time</code>: <code>HH:MM:SS</code> or <code>null</code>.</li>
                         <li><code>upcoming_sessions[].assigned_players</code>: coach's players assigned to the plan.</li>
@@ -783,7 +798,7 @@
                         </li>
                         <li><code>players[].state</code>: stored player state, either <code>ACTIVE</code> or <code>INJURED</code>.
                         </li>
-                        <li><code>players[].needs_attention</code>: server-computed boolean. Injury also counts as needs attention.
+                        <li><code>players[].needs_attention</code>: server-computed boolean. Injury also counts as needs attention. Not-started sessions do not count as low progress until there is a final player outcome such as completed or missed.
                         </li>
                         <li><code>players[].expected_return_date</code>: <code>YYYY-MM-DD</code> or <code>null</code>.
                         </li>
@@ -838,6 +853,7 @@
                         <li><code>expected_return_date</code>: optional when <code>state=INJURED</code>, format <code>YYYY-MM-DD</code>.</li>
                         <li>Sending <code>expected_return_date</code> with <code>state=ACTIVE</code> returns <code>400</code>.</li>
                         <li>Setting <code>state=ACTIVE</code> clears the stored expected return date.</li>
+                        <li><code>needs_attention</code> is recomputed after the state change. Not-started sessions do not count as low progress until there is a final player outcome.</li>
                     </ul>
                 </div>
                 <div class="card">
@@ -987,10 +1003,11 @@
                         </li>
                         <li><code>player.state</code>: stored state, either <code>ACTIVE</code> or <code>INJURED</code>.</li>
                         <li><code>player.expectedReturnDate</code>: <code>YYYY-MM-DD</code> or <code>null</code>.</li>
-                        <li><code>player.needsAttention</code>: computed boolean, derived from injury and training/performance rules.</li>
+                        <li><code>player.needsAttention</code>: computed boolean, derived from injury and training/performance rules. Not-started sessions do not count as low progress until there is a final player outcome.</li>
+                        <li><code>overview.keyMetrics.attendance</code>: derived from sessions with a final player outcome only. Scheduled or in-progress sessions are not counted as missed.</li>
                         <li><code>overview.coachInsights</code>: ordered list of strings.</li>
                         <li><code>overview.recentActivity[].status</code>: <code>COMPLETED</code> or <code>MISSED</code>;
-                            times use <code>HH:MM</code>.
+                            <code>MISSED</code> is shown only after the session is completed and the player has no attendance record. Times use <code>HH:MM</code>.
                         </li>
                         <li><code>overview.needsAttention[]</code>: up to 3 computed attention reasons, with injury shown first when present.</li>
                     </ul>

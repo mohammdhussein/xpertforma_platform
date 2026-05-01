@@ -7,6 +7,7 @@ from rest_framework.test import APIClient
 
 from accounts.models import CoachProfile, PlayerProfile, Position, Role, User, UserRole
 from training.models import (
+    PlayerCheckin,
     SessionAttendance,
     SessionLifecycle,
     TrainingPlan,
@@ -72,7 +73,7 @@ class CoachDashboardTests(TestCase):
 
         # second ACTIVE player created this month
         p2 = _make_player("p2@example.com", self.coach, self.position, state="ACTIVE")
-        # injured player (counts toward total_all, not active)
+        # injured player still counts toward total players
         _make_player("p3@example.com", self.coach, self.position, state="INJURED")
 
         with patch("accounts.views.coach_dashboard._dashboard_now", return_value=mocked_now):
@@ -80,10 +81,30 @@ class CoachDashboardTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         stats = response.data["overview_stats"]["total_players"]
-        # setUp player + p2 are ACTIVE
-        self.assertEqual(stats["value"], 2)
-        # delta_value = ACTIVE players created this month; both were just created
-        self.assertGreaterEqual(stats["delta_value"], 1)
+        # setUp player + p2 + injured player
+        self.assertEqual(stats["value"], 3)
+        self.assertGreaterEqual(stats["delta_value"], 3)
+
+    def test_overview_stats_total_players_does_not_change_when_player_is_injured(self):
+        mocked_now = timezone.datetime(2026, 4, 20, 8, 0, tzinfo=dt_timezone.utc)
+
+        with patch("accounts.views.coach_dashboard._dashboard_now", return_value=mocked_now):
+            active_response = self.client.get("/api/coach/dashboard/")
+
+        profile = PlayerProfile.objects.get(user=self.player)
+        profile.state = "INJURED"
+        profile.save(update_fields=["state"])
+
+        with patch("accounts.views.coach_dashboard._dashboard_now", return_value=mocked_now):
+            injured_response = self.client.get("/api/coach/dashboard/")
+
+        self.assertEqual(active_response.status_code, 200)
+        self.assertEqual(injured_response.status_code, 200)
+        self.assertEqual(
+            active_response.data["overview_stats"]["total_players"]["value"],
+            injured_response.data["overview_stats"]["total_players"]["value"],
+        )
+        self.assertEqual(injured_response.data["overview_stats"]["total_players"]["value"], 1)
 
     # ------------------------------------------------------------------
     # Test 2 — overview_stats.sessions_today
@@ -216,7 +237,7 @@ class CoachDashboardTests(TestCase):
         self.assertNotIn("duration_minutes", first)
 
     # ------------------------------------------------------------------
-    # Test 5 - upcoming_sessions include available time windows and exclude completed lifecycle sessions
+    # Test 5 - upcoming_sessions includes only not-started future sessions
     # ------------------------------------------------------------------
     def test_upcoming_sessions_exclude_completed_sessions(self):
         mocked_now = timezone.datetime(2026, 4, 8, 8, 0, tzinfo=dt_timezone.utc)
@@ -281,11 +302,7 @@ class CoachDashboardTests(TestCase):
         titles = [session["title"] for session in response.data["upcoming_sessions"]]
         self.assertNotIn("Completed Future Session", titles)
         self.assertNotIn("Expired Not Started Session", titles)
-        self.assertEqual(titles, [
-            "Active Available Session",
-            "In Progress Without End Time",
-            "Available Not Started Session",
-        ])
+        self.assertEqual(titles, ["Available Not Started Session"])
 
     # ------------------------------------------------------------------
     # Test 6 - alerts: one per severity, correct order, alerts_total
@@ -341,3 +358,111 @@ class CoachDashboardTests(TestCase):
         # old keys must not appear
         self.assertNotIn("stats", response.data)
         self.assertNotIn("my_players", response.data)
+
+    def test_injured_players_are_grouped_into_one_alert(self):
+        mocked_now = timezone.datetime(2026, 4, 8, 8, 0, tzinfo=dt_timezone.utc)
+
+        profile = PlayerProfile.objects.get(user=self.player)
+        profile.state = "INJURED"
+        profile.save(update_fields=["state"])
+        p2 = _make_player("injured2@example.com", self.coach, self.position, state="INJURED")
+        p3 = _make_player("injured3@example.com", self.coach, self.position, state="INJURED")
+
+        with patch("accounts.views.coach_dashboard._dashboard_now", return_value=mocked_now):
+            response = self.client.get("/api/coach/dashboard/")
+
+        self.assertEqual(response.status_code, 200)
+        injured_alerts = [
+            alert for alert in response.data["alerts"]
+            if alert["alert_type"] == "PLAYER_INJURED"
+        ]
+        self.assertEqual(len(injured_alerts), 1)
+        injured_alert = injured_alerts[0]
+        self.assertEqual(injured_alert["severity"], "CRITICAL")
+        self.assertEqual(len(injured_alert["related_players"]), 3)
+        self.assertEqual(response.data["overview_stats"]["attention"]["value"], 3)
+        self.assertEqual(
+            {str(player["id"]) for player in injured_alert["related_players"]},
+            {str(self.player.id), str(p2.id), str(p3.id)},
+        )
+        self.assertEqual(injured_alert["related_players"][0]["position"]["code"], "CM")
+        self.assertIn("avatar_url", injured_alert["related_players"][0])
+
+    def test_fatigue_alert_requires_recent_consecutive_checkins(self):
+        mocked_now = timezone.datetime(2026, 4, 8, 8, 0, tzinfo=dt_timezone.utc)
+        stale_player = _make_player("stale@example.com", self.coach, self.position)
+
+        for offset in range(3):
+            PlayerCheckin.objects.create(
+                player=self.player,
+                date=mocked_now.date() - timedelta(days=offset),
+                sleep_hours=6,
+                sleep_quality="FAIR",
+                mood=2,
+                sore_zones=[],
+                readiness_score=25,
+            )
+            PlayerCheckin.objects.create(
+                player=stale_player,
+                date=mocked_now.date() - timedelta(days=5 + offset),
+                sleep_hours=6,
+                sleep_quality="FAIR",
+                mood=2,
+                sore_zones=["calf"],
+                readiness_score=10,
+            )
+
+        with patch("accounts.views.coach_dashboard._dashboard_now", return_value=mocked_now):
+            response = self.client.get("/api/coach/dashboard/")
+
+        self.assertEqual(response.status_code, 200)
+        fatigue_alerts = [
+            alert for alert in response.data["alerts"]
+            if alert["alert_type"] == "FATIGUE_RISK"
+        ]
+        self.assertEqual(len(fatigue_alerts), 1)
+        self.assertEqual(fatigue_alerts[0]["severity"], "WARNING")
+        self.assertEqual(str(fatigue_alerts[0]["related_players"][0]["id"]), str(self.player.id))
+
+    def test_low_attendance_alerts_use_30_day_window(self):
+        mocked_now = timezone.datetime(2026, 4, 30, 8, 0, tzinfo=dt_timezone.utc)
+        today = mocked_now.date()
+
+        plan = _make_plan(self.coach, today=today - timedelta(days=60))
+        TrainingPlanPlayer.objects.create(plan=plan, player=self.player, assigned_by=self.coach)
+
+        recent_session = TrainingSession.objects.create(
+            plan=plan,
+            title="Recent Low Attendance",
+            session_date=today - timedelta(days=10),
+            session_type="GROUP",
+            start_time=time(9, 0),
+            end_time=time(10, 0),
+        )
+        recent_lifecycle = SessionLifecycle.objects.create(session=recent_session, status="COMPLETED")
+        recent_lifecycle.ended_at = mocked_now - timedelta(days=10)
+        recent_lifecycle.save(update_fields=["ended_at"])
+
+        old_session = TrainingSession.objects.create(
+            plan=plan,
+            title="Old Low Attendance",
+            session_date=today - timedelta(days=31),
+            session_type="GROUP",
+            start_time=time(9, 0),
+            end_time=time(10, 0),
+        )
+        old_lifecycle = SessionLifecycle.objects.create(session=old_session, status="COMPLETED")
+        old_lifecycle.ended_at = mocked_now - timedelta(days=31)
+        old_lifecycle.save(update_fields=["ended_at"])
+
+        with patch("accounts.views.coach_dashboard._dashboard_now", return_value=mocked_now):
+            response = self.client.get("/api/coach/dashboard/")
+
+        self.assertEqual(response.status_code, 200)
+        low_attendance_titles = [
+            alert["related_session"]["title"]
+            for alert in response.data["alerts"]
+            if alert["alert_type"] == "LOW_ATTENDANCE"
+        ]
+        self.assertIn("Recent Low Attendance", low_attendance_titles)
+        self.assertNotIn("Old Low Attendance", low_attendance_titles)
