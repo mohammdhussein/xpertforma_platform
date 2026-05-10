@@ -1688,6 +1688,28 @@ a {
     grid-column: 1 / -1;
 }
 
+.password-form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.password-modal-copy {
+    display: grid;
+    gap: 4px;
+    margin-bottom: 16px;
+    color: #475569;
+}
+
+.password-modal-copy strong {
+    color: #0f172a;
+    font-size: 1rem;
+}
+
+.password-modal-copy span {
+    font-size: 0.9rem;
+}
+
 .form-input:is(select) {
     appearance: none;
 }
@@ -1798,6 +1820,10 @@ a {
 
     .admin-stats-grid,
     .user-form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .password-form-grid {
         grid-template-columns: 1fr;
     }
 }

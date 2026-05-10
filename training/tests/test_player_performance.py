@@ -128,15 +128,46 @@ class PlayerPerformanceAPITests(TestCase):
         self.assertEqual(day1["sessions"], {"completed": 1, "planned": 1, "percentage": 100})
         self.assertEqual(day1["effort"], {"percentage": 100, "source": "INTENSITY_WEIGHTED_SESSION_COMPLETION"})
         self.assertEqual(day1["recovery"], {"percentage": 80, "source": "PLAYER_CHECKINS"})
-        self.assertEqual(day1["consistency"], {"percentage": 50, "streak_days": 1})
-        self.assertEqual(day1["score"], 86)
+        self.assertEqual(day1["consistency"], {"percentage": 100, "streak_days": 1})
+        self.assertEqual(day1["score"], 93)
 
         self.assertEqual(day2["sessions"], {"completed": 0, "planned": 1, "percentage": 0})
-        self.assertEqual(day2["score"], 28)
+        self.assertEqual(day2["recovery"], {"percentage": 60, "source": "PLAYER_CHECKINS"})
+        self.assertEqual(day2["consistency"], {"percentage": 0, "streak_days": 0})
+        self.assertEqual(day2["score"], 21)
 
         self.assertEqual(day3["sessions"], {"completed": 0, "planned": 0, "percentage": 0})
-        self.assertEqual(day3["recovery"]["percentage"], 70)
-        self.assertEqual(day3["score"], 64)
+        self.assertEqual(day3["recovery"], {"percentage": 0, "source": "PLAYER_CHECKINS"})
+        self.assertEqual(day3["consistency"], {"percentage": 0, "streak_days": 0})
+        self.assertEqual(day3["score"], 0)
+
+    def test_recovery_uses_only_that_days_checkin(self):
+        PlayerCheckin.objects.create(
+            player=self.player,
+            date=date(2024, 1, 1),
+            sleep_hours="7.00",
+            sleep_quality=SleepQuality.GOOD,
+            mood=4,
+            sore_zones=[],
+            readiness_score=80,
+        )
+        PlayerCheckin.objects.create(
+            player=self.player,
+            date=date(2024, 1, 3),
+            sleep_hours="5.00",
+            sleep_quality=SleepQuality.POOR,
+            mood=2,
+            sore_zones=["hamstring"],
+            readiness_score=35,
+        )
+
+        response = self._get("2024-01-01", "2024-01-03")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            [day["recovery"]["percentage"] for day in response.data["days"]],
+            [80, 0, 35],
+        )
 
     def test_effort_weights_completed_sessions_by_intensity(self):
         self._session(
@@ -225,18 +256,23 @@ class PlayerPerformanceAPITests(TestCase):
         self.assertEqual(response.data["days"][0]["recovery"]["percentage"], 0)
         self.assertEqual(response.data["days"][0]["score"], 0)
 
-    def test_weekly_load_streak_overrides_calculated_streak(self):
-        self._session(date(2024, 1, 1), "Completed", completed=True, attended=True)
+    def test_consistency_streak_is_daily_and_does_not_use_weekly_load(self):
+        self._session(date(2024, 1, 1), "Completed one", completed=True, attended=True)
+        self._session(date(2024, 1, 2), "Missed", completed=True, attended=False)
+        self._session(date(2024, 1, 3), "Completed two", completed=True, attended=True)
         WeeklyLoad.objects.create(
             player=self.player,
             week_start=date(2024, 1, 1),
             streak_days=7,
         )
 
-        response = self._get("2024-01-01", "2024-01-01")
+        response = self._get("2024-01-01", "2024-01-03")
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.data["days"][0]["consistency"]["streak_days"], 7)
+        day1, day2, day3 = response.data["days"]
+        self.assertEqual(day1["consistency"], {"percentage": 100, "streak_days": 1})
+        self.assertEqual(day2["consistency"], {"percentage": 0, "streak_days": 0})
+        self.assertEqual(day3["consistency"], {"percentage": 100, "streak_days": 1})
 
     def test_missing_start_date_returns_400(self):
         response = self._get(start=None, end="2024-01-03")

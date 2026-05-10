@@ -1,16 +1,19 @@
+import json
 from urllib.parse import quote
 
 from django.conf import settings
 from django.contrib.auth.mixins import AccessMixin
 from django.contrib.auth.views import LoginView, LogoutView
+from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import PermissionDenied
+from django.core.exceptions import ValidationError
 from django.shortcuts import get_object_or_404
 from django.http import JsonResponse
 from django.urls import reverse, reverse_lazy
 from django.views import View
 from django.views.generic import TemplateView
 
-from accounts.models import CoachProfile
+from accounts.models import CoachProfile, User
 from website.selectors.admin_panel import (
     build_admin_coaches_payload,
     build_admin_dashboard_payload,
@@ -126,7 +129,37 @@ class DashboardPageView(AdminPageMixin, TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["dashboard_data"] = build_admin_dashboard_payload()
+        context["dashboard_config"] = {
+            "passwordChangeUrlTemplate": reverse(
+                "staff-user-change-password",
+                kwargs={"user_id": "00000000-0000-0000-0000-000000000000"},
+            ),
+        }
         return context
+
+
+class ChangeUserPasswordView(StaffAccessMixin, View):
+    def post(self, request, user_id, *args, **kwargs):
+        user = get_object_or_404(User, id=user_id)
+
+        try:
+            payload = json.loads(request.body.decode("utf-8") or "{}")
+        except json.JSONDecodeError:
+            return JsonResponse({"errors": ["Invalid JSON payload."]}, status=400)
+
+        password = str(payload.get("password") or "")
+        confirm_password = str(payload.get("confirm_password") or "")
+        if password != confirm_password:
+            return JsonResponse({"errors": ["Passwords do not match."]}, status=400)
+
+        try:
+            validate_password(password, user=user)
+        except ValidationError as exc:
+            return JsonResponse({"errors": list(exc.messages)}, status=400)
+
+        user.set_password(password)
+        user.save(update_fields=["password"])
+        return JsonResponse({"message": "Password changed successfully."})
 
 
 class CoachRequestsPageView(AdminPageMixin, TemplateView):

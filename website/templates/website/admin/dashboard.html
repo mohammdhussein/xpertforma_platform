@@ -121,5 +121,42 @@
         </div>
     </form>
 </div>
+
+<div id="password-modal" class="modal hidden" aria-hidden="true">
+    <div class="modal__backdrop" data-close-password-modal="true"></div>
+    <form class="modal__card user-modal-card" id="password-form" aria-labelledby="password-modal-title">
+        <div class="modal__header">
+            <div>
+                <p class="eyebrow">User Security</p>
+                <h2 id="password-modal-title" class="modal__title">Change Password</h2>
+            </div>
+            <button type="button" class="icon-button" aria-label="Close password form" data-close-password-modal="true">&times;</button>
+        </div>
+
+        <div class="password-modal-copy">
+            <strong id="password-user-name"></strong>
+            <span id="password-user-email"></span>
+        </div>
+
+        <div id="password-feedback" class="alert hidden"></div>
+
+        <div class="password-form-grid">
+            <label class="form-field">
+                <span class="field-label">New Password</span>
+                <span class="input-shell"><input id="password-new" class="form-input" type="password" autocomplete="new-password" required></span>
+            </label>
+            <label class="form-field">
+                <span class="field-label">Confirm Password</span>
+                <span class="input-shell"><input id="password-confirm" class="form-input" type="password" autocomplete="new-password" required></span>
+            </label>
+        </div>
+
+        <div class="modal__footer">
+            <button type="button" class="button button--ghost" data-close-password-modal="true">Cancel</button>
+            <button type="submit" class="button button--primary" id="password-submit">Change Password</button>
+        </div>
+    </form>
+</div>
 {{ dashboard_data.users|json_script:"admin-users-initial-data" }}
+{{ dashboard_config|json_script:"admin-dashboard-config" }}
 {% endblock %}

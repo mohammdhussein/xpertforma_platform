@@ -235,6 +235,8 @@
         <div class="toc">
             <a href="#auth">Auth</a>
             <a href="#admin">Admin Coach Approval</a>
+            <a href="#staff-panel">Staff Panel</a>
+            <a href="#ai-assistant">AI Assistant</a>
             <a href="#coach">Coach</a>
             <a href="#coach-players">Coach Players</a>
             <a href="#coach-plans">Coach Plans</a>
@@ -555,6 +557,183 @@
                         <li><code>reason</code>: optional string.</li>
                         <li><code>status</code>: always <code>REJECTED</code>.</li>
                     </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="section api-section" id="staff-panel">
+        <h2>Staff Panel</h2>
+
+        <div class="endpoint" data-search="POST /staff/users/change-password admin panel users password staff">
+            <div><span class="badge post">POST</span><span
+                    class="path">/staff/users/&lt;user_id&gt;/change-password/</span></div>
+            <p class="meta">Authenticated staff only. Changes a user's password from the server-rendered admin panel using Django password validators.</p>
+            <div class="grid">
+                <div class="card">
+                    <h4>Path Params</h4>
+                    <ul>
+                        <li><code>user_id</code>: user UUID.</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h4>Request Body</h4>
+                    <pre>{
+  "password": "NewStrongPass123!",
+  "confirm_password": "NewStrongPass123!"
+}</pre>
+                </div>
+                <div class="card">
+                    <h4>Response 200</h4>
+                    <pre>{
+  "message": "Password changed successfully."
+}</pre>
+                </div>
+                <div class="card">
+                    <h4>Expected Values</h4>
+                    <ul>
+                        <li><code>password</code> and <code>confirm_password</code> must match.</li>
+                        <li><code>400</code> returns <code>errors</code> when JSON is invalid, confirmation fails, or password validation fails.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="section api-section" id="ai-assistant">
+        <h2>AI Assistant</h2>
+
+        <div class="endpoint"
+             data-search="POST /api/ai/chat ai assistant ollama gemini backend data message screen selected_player_id history answer cards actions suggested_questions">
+            <div><span class="badge post">POST</span><span class="path">/api/ai/chat/</span></div>
+            <p class="meta">Authenticated player or approved coach only. Sends a short, role-scoped question to the
+                XpertForma backend data assistant. The mobile app calls Django only; Django blocks unrelated questions,
+                routes the request to safe backend data sources, and builds compact permission-scoped facts. Clear
+                factual questions such as profile/account fields, today's sessions, latest sessions, attendance
+                summaries, readiness check-ins, and attention reasons can be answered directly by Django for lower
+                latency; other backend-data questions
+                call the configured server-side AI provider for the final JSON response. The endpoint is disabled unless
+                <code>AI_ASSISTANT_ENABLED=True</code>. Local development can use <code>AI_PROVIDER=ollama</code>;
+                Gemini is also supported with a server-side key.</p>
+            <div class="grid">
+                <div class="card">
+                    <h4>Request Body</h4>
+                    <pre>{
+  "message": "How many sessions did I complete this week?",
+  "screen": "PLAYER_PROGRESS",
+  "selected_player_id": null,
+  "history": []
+}</pre>
+                </div>
+                <div class="card">
+                    <h4>Coach Body</h4>
+                    <pre>{
+  "message": "Who needs attention today?",
+  "screen": "COACH_DASHBOARD",
+  "selected_player_id": null,
+  "history": []
+}</pre>
+                    <pre>{
+  "message": "What is this player's attendance this month?",
+  "screen": "COACH_PLAYER_PROFILE",
+  "selected_player_id": "player-uuid",
+  "history": []
+}</pre>
+                    <pre>{
+  "message": "why?",
+  "screen": "COACH_PLAYER_PROFILE",
+  "selected_player_id": "player-uuid",
+  "history": [
+    {
+      "role": "user",
+      "content": "Why does this player need attention?"
+    },
+    {
+      "role": "assistant",
+      "content": "This player needs attention because he missed the latest session."
+    }
+  ]
+}</pre>
+                </div>
+                <div class="card">
+                    <h4>Response 200</h4>
+                    <pre>{
+  "answer": "Today, you have 2 sessions: Speed on 2026-05-08 from 21:20:00 to 22:20:00 (NOT_STARTED); Stamina on 2026-05-08 from 21:10:00 to 22:07:00 (COMPLETED).",
+  "cards": [
+    {
+      "title": "Speed",
+      "value": "Speed on 2026-05-08 from 21:20:00 to 22:20:00 (NOT_STARTED)",
+      "severity": "INFO"
+    }
+  ],
+  "actions": [],
+  "suggested_questions": [
+    "What is my next session?",
+    "Did I attend today's session?",
+    "Show my attendance summary"
+  ]
+}</pre>
+                    <pre>{
+  "answer": "Your recovery is lower today mainly because your sleep quality was poor and your readiness score is not high. Focus on rest, hydration, and tell your coach if soreness continues.",
+  "cards": [
+    {
+      "title": "Main factor",
+      "value": "Poor sleep",
+      "severity": "WARNING"
+    }
+  ],
+  "actions": [],
+  "suggested_questions": [
+    "How can I improve recovery?",
+    "What should I focus on today?"
+  ]
+}</pre>
+                </div>
+                <div class="card">
+                    <h4>Out Of Scope Response 200</h4>
+                    <pre>{
+  "answer": "I can only help with information related to your XpertForma backend data, such as profiles, sessions, attendance, performance, readiness, progress, plans, players, and coach insights.",
+  "cards": [],
+  "actions": [],
+  "suggested_questions": [
+    "What is my latest session?",
+    "How is my weekly progress?",
+    "Show my attendance summary"
+  ]
+}</pre>
+                </div>
+                <div class="card">
+                    <h4>Expected Values</h4>
+                    <ul>
+                        <li><code>message</code>: required string, max 2000 characters.</li>
+                        <li><code>screen</code>: optional string; defaults to <code>UNKNOWN</code>.</li>
+                        <li><code>selected_player_id</code>: optional UUID/null. Players cannot use it. Coaches can use
+                            it only for players they are allowed to access.</li>
+                        <li><code>history</code>: optional recent chat turns, newest last. Each item has
+                            <code>role</code> as <code>user</code> or <code>assistant</code> and <code>content</code>
+                            up to 2000 characters. Used only to resolve follow-up wording like <code>why?</code> or
+                            <code>why he need attention?</code>; facts still come from permission-scoped backend data.</li>
+                        <li>Allowed scope: safe authenticated XpertForma backend data including profiles, players,
+                            coaches, teams, sessions, plans, attendance, performance, progress, readiness, check-ins,
+                            dashboard stats, alerts, positions, and staff summaries.</li>
+                        <li>Blocked examples: code, jokes, capitals, history, politics, math, weather, news, recipes,
+                            movies, songs, and general programming.</li>
+                        <li>Django calculates factual profile fields, counts, percentages, latest records, sessions,
+                            attendance, readiness, and attention reasons before any model call. When the answer is clear
+                            from those facts, Django returns the response directly without waiting for Ollama/Gemini.</li>
+                        <li><code>cards[].severity</code>: <code>INFO</code> | <code>WARNING</code> |
+                            <code>CRITICAL</code>.</li>
+                        <li>AI provider credentials and local Ollama URLs stay server-side and are never exposed to
+                            mobile clients.</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h4>Error Notes</h4>
+                    <pre>HTTP 400   validation error, including missing message
+HTTP 401   missing or invalid JWT
+HTTP 403   unsupported role or unapproved coach
+HTTP 503   { "detail": "AI assistant is disabled" }
+HTTP 503   { "detail": "AI service is unavailable" }</pre>
                 </div>
             </div>
         </div>
@@ -1678,14 +1857,15 @@ HTTP 409   { "detail": "Session must be in progress to be ended." }</pre>
                         <li><code>effort.percentage</code>: completed intensity points divided by planned intensity
                             points. Weights are <code>LOW=1</code>, <code>MEDIUM=2</code>, <code>HIGH=3</code>.
                         </li>
-                        <li><code>recovery.percentage</code>: daily <code>PlayerCheckin.readiness_score</code>, falling
-                            back to selected-range average readiness, then <code>0</code>.
+                        <li><code>recovery.percentage</code>: that day's <code>PlayerCheckin.readiness_score</code>, or
+                            <code>0</code> when the player has no check-in for that date.
                         </li>
-                        <li><code>consistency.percentage</code>: total completed sessions in the range divided by total
-                            planned sessions in the range.
+                        <li><code>consistency.percentage</code>: completed sessions for that day divided by planned
+                            sessions for that day.
                         </li>
-                        <li><code>consistency.streak_days</code>: <code>WeeklyLoad.streak_days</code> for the Monday
-                            week containing <code>start_date</code>, or calculated consecutive completed training days.
+                        <li><code>consistency.streak_days</code>: consecutive fully completed training days ending on
+                            that chart day. Days with no planned sessions keep the current streak; missed planned days
+                            reset it.
                         </li>
                         <li>All percentages and scores are rounded to the nearest integer and clamped between
                             <code>0</code> and <code>100</code>.

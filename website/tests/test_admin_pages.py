@@ -1,3 +1,5 @@
+import json
+
 from django.test import Client, TestCase
 
 from accounts.models import CoachProfile, PlayerProfile, User
@@ -141,3 +143,36 @@ class AdminCoachRequestsPageTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.approved_user.refresh_from_db()
         self.assertFalse(self.approved_user.is_active)
+
+    def test_staff_can_change_user_password_from_panel(self):
+        self.client.force_login(self.staff_user)
+
+        response = self.client.post(
+            f"/staff/users/{self.player_user.id}/change-password/",
+            data=json.dumps({
+                "password": "FreshPass987!",
+                "confirm_password": "FreshPass987!",
+            }),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.player_user.refresh_from_db()
+        self.assertTrue(self.player_user.check_password("FreshPass987!"))
+
+    def test_staff_change_user_password_requires_matching_confirmation(self):
+        self.client.force_login(self.staff_user)
+
+        response = self.client.post(
+            f"/staff/users/{self.player_user.id}/change-password/",
+            data=json.dumps({
+                "password": "FreshPass987!",
+                "confirm_password": "DifferentPass987!",
+            }),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("Passwords do not match.", response.json()["errors"])
+        self.player_user.refresh_from_db()
+        self.assertTrue(self.player_user.check_password("StrongPass123!"))

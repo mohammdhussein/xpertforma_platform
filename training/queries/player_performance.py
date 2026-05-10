@@ -4,7 +4,6 @@ from training.models import (
     SessionLifecycle,
     TrainingPlanPlayer,
     TrainingSession,
-    WeeklyLoad,
 )
 
 
@@ -57,7 +56,3 @@ def get_checkins_by_date(player_user, *, start_date, end_date):
             date__lte=end_date,
         )
     }
-
-
-def get_weekly_load(player_user, *, week_start):
-    return WeeklyLoad.objects.filter(player=player_user, week_start=week_start).first()
