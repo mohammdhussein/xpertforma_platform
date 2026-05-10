@@ -32,6 +32,7 @@ urlpatterns = [
     path("", include("website.urls.public")),
     path("staff/", include("website.urls.admin")),
     path("api/auth/", include("accounts.urls.auth")),
+    path("api/ai/", include("ai_assistant.urls")),
     path("api/", include("accounts.urls.admin")),
     path("api/", include("accounts.urls.coach")),
     path("api/", include("accounts.urls.player")),

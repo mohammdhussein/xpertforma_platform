@@ -111,7 +111,7 @@ def build_coach_dashboard_payload(coach_user, *, now) -> dict:
     deadline_time = deadline.time()
     upcoming_window = (
         Q(session_date__gt=today)
-        | Q(session_date=today, start_time__gte=current_time)
+        | Q(session_date=today)
     )
 
     upcoming_qs = list(

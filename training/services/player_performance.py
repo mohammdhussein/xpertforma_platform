@@ -8,7 +8,6 @@ from training.queries.player_performance import (
     get_checkins_by_date,
     get_completed_attendance_session_ids,
     get_player_sessions,
-    get_weekly_load,
 )
 from training.statuses import Intensity
 
@@ -34,18 +33,12 @@ def build_player_performance_payload(player_user, *, start_date_str, end_date_st
         sessions,
         completed_session_ids,
     )
-    total_planned = sum(planned_by_date.values())
-    total_completed = sum(completed_by_date.values())
-    consistency_percentage = _percentage(total_completed, total_planned)
-    streak_days = _get_streak_days(
-        player_user,
+    streak_days_by_date = _build_streak_days_by_date(
         start_date=start_date,
         end_date=end_date,
         planned_by_date=planned_by_date,
         completed_by_date=completed_by_date,
     )
-    fallback_recovery = _average_readiness(checkins_by_date.values())
-
     days = []
     for day in _date_range(start_date, end_date):
         planned = planned_by_date.get(day, 0)
@@ -55,7 +48,8 @@ def build_player_performance_payload(player_user, *, start_date_str, end_date_st
             completed_effort_by_date.get(day, 0),
             planned_effort_by_date.get(day, 0),
         )
-        recovery_percentage = _recovery_percentage(checkins_by_date.get(day), fallback_recovery)
+        consistency_percentage = _percentage(completed, planned)
+        recovery_percentage = _recovery_percentage(checkins_by_date.get(day))
         score = _score(
             planned=planned,
             effort_percentage=effort_percentage,
@@ -81,7 +75,7 @@ def build_player_performance_payload(player_user, *, start_date_str, end_date_st
             },
             "consistency": {
                 "percentage": consistency_percentage,
-                "streak_days": streak_days,
+                "streak_days": streak_days_by_date.get(day, 0),
             },
         })
 
@@ -147,16 +141,9 @@ def _clamp(value):
     return max(0, min(100, int(value)))
 
 
-def _average_readiness(checkins):
-    scores = [checkin.readiness_score for checkin in checkins]
-    if not scores:
-        return 0
-    return _clamp(round(sum(scores) / len(scores)))
-
-
-def _recovery_percentage(checkin, fallback_recovery):
+def _recovery_percentage(checkin):
     if checkin is None:
-        return fallback_recovery
+        return 0
     return _clamp(checkin.readiness_score)
 
 
@@ -172,28 +159,15 @@ def _score(*, planned, effort_percentage, recovery_percentage, consistency_perce
     return _clamp(round(raw_score))
 
 
-def _get_streak_days(player_user, *, start_date, end_date, planned_by_date, completed_by_date):
-    week_start = start_date - timedelta(days=start_date.weekday())
-    weekly_load = get_weekly_load(player_user, week_start=week_start)
-    if weekly_load is not None:
-        return weekly_load.streak_days
-    return _calculate_completed_training_day_streak(
-        start_date=start_date,
-        end_date=end_date,
-        planned_by_date=planned_by_date,
-        completed_by_date=completed_by_date,
-    )
-
-
-def _calculate_completed_training_day_streak(*, start_date, end_date, planned_by_date, completed_by_date):
-    best_streak = 0
+def _build_streak_days_by_date(*, start_date, end_date, planned_by_date, completed_by_date):
+    streak_days_by_date = {}
     running_streak = 0
     for day in _date_range(start_date, end_date):
         planned = planned_by_date.get(day, 0)
         completed = completed_by_date.get(day, 0)
         if planned > 0 and completed == planned:
             running_streak += 1
-            best_streak = max(best_streak, running_streak)
         elif planned > 0:
             running_streak = 0
-    return best_streak
+        streak_days_by_date[day] = running_streak
+    return streak_days_by_date

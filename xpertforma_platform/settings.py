@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     'accounts',
     'organizations',
     'training',
+    'ai_assistant',
     'website',
     'rest_framework_simplejwt.token_blacklist',
 ]
@@ -115,11 +116,17 @@ CSRF_TRUSTED_ORIGINS = [
 if RENDER_EXTERNAL_HOSTNAME:
     CSRF_TRUSTED_ORIGINS.append(f"https://{RENDER_EXTERNAL_HOSTNAME}")
 
+DEFAULT_DATABASE_URL = os.environ.get("DATABASE_URL", f"sqlite:///{BASE_DIR}/db.sqlite3")
+LOCAL_DATABASE_URL = os.environ.get("LOCAL_DATABASE_URL", DEFAULT_DATABASE_URL)
+RENDER_DATABASE_URL = os.environ.get("RENDER_DATABASE_URL")
+
 DATABASES = {
-    "default": dj_database_url.parse(
-        os.environ.get("DATABASE_URL", f"sqlite:///{BASE_DIR}/db.sqlite3")
-    )
+    "default": dj_database_url.parse(DEFAULT_DATABASE_URL),
+    "local": dj_database_url.parse(LOCAL_DATABASE_URL),
 }
+
+if RENDER_DATABASE_URL:
+    DATABASES["render"] = dj_database_url.parse(RENDER_DATABASE_URL)
 
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
@@ -130,7 +137,7 @@ STORAGES = {
     "staticfiles": {
         "BACKEND": (
             "whitenoise.storage.CompressedManifestStaticFilesStorage"
-            if not DEBUG
+            if not (DEBUG or RUNNING_TESTS)
             else "django.contrib.staticfiles.storage.StaticFilesStorage"
         ),
     },
@@ -215,5 +222,20 @@ PASSWORD_SETUP_DEEP_LINK_BASE = os.getenv(
     "PASSWORD_SETUP_DEEP_LINK_BASE",
     "https://xpertforma-platform.onrender.com/set-password",
 )
+
+AI_ASSISTANT_ENABLED = os.getenv("AI_ASSISTANT_ENABLED", "False") == "True"
+AI_PROVIDER = os.getenv("AI_PROVIDER", "ollama")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+GEMINI_FALLBACK_MODEL = os.getenv("GEMINI_FALLBACK_MODEL", "gemini-2.5-flash-lite")
+OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+OLLAMA_CHAT_MODEL = os.getenv("OLLAMA_CHAT_MODEL", "qwen3:4b")
+OLLAMA_FALLBACK_MODEL = os.getenv("OLLAMA_FALLBACK_MODEL", "llama3.2:3b")
+OLLAMA_NUM_PREDICT = int(os.getenv("OLLAMA_NUM_PREDICT", "220"))
+AI_RESPONSE_TEMPERATURE = float(os.getenv("AI_RESPONSE_TEMPERATURE", "0"))
+AI_RANDOM_SEED = int(os.getenv("AI_RANDOM_SEED", "7"))
+AI_MAX_CONTEXT_DAYS = int(os.getenv("AI_MAX_CONTEXT_DAYS", "14"))
+AI_MAX_HISTORY_MESSAGES = int(os.getenv("AI_MAX_HISTORY_MESSAGES", "8"))
+AI_CONVERSATION_CACHE_TTL_SECONDS = int(os.getenv("AI_CONVERSATION_CACHE_TTL_SECONDS", "1800"))
 
 AUTH_USER_MODEL = "accounts.User"
