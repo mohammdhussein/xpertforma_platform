@@ -177,7 +177,27 @@ def _extract_name_hint(normalized):
             tokens = [
                 token
                 for token in _tokenize(remainder)
-                if token not in {"this", "player", "attendance", "readiness", "progress", "performance", "status"}
+                if token not in {
+                    "this",
+                    "player",
+                    "attendance",
+                    "readiness",
+                    "progress",
+                    "performance",
+                    "status",
+                    "the",
+                    "latest",
+                    "last",
+                    "current",
+                    "session",
+                    "sessions",
+                    "training",
+                    "plan",
+                    "plans",
+                    "today",
+                    "week",
+                    "month",
+                }
             ]
             if tokens:
                 return " ".join(tokens[:3])
