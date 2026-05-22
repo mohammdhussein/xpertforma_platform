@@ -45,7 +45,8 @@ def render_answer_html(answer):
     accent_color = _status_accent_color(status)
     html = (
         '<div style="font-family: system-ui, -apple-system, Segoe UI, sans-serif; color: #0f172a; '
-        f'line-height: 1.45; font-size: 15px; border-left: 4px solid {accent_color}; padding: 6px 0 6px 12px;">'
+        'line-height: 1.45; font-size: 15px; background-color: #ffffff; border: 1px solid #dbe5f0; '
+        f'border-left: 4px solid {accent_color}; border-radius: 8px; padding: 14px;">'
         f'<p style="margin: 0; color: #0f172a;">{_render_answer_text(answer or "", status)}</p>'
         "</div>"
     )
@@ -55,7 +56,7 @@ def render_answer_html(answer):
 def render_plan_options_html(*, player_name, options):
     option_cards = "\n".join(render_plan_option_card(option) for option in options)
     html = f"""
-<div style="font-family: system-ui, -apple-system, Segoe UI, sans-serif; color: #0f172a; line-height: 1.45; font-size: 15px; background-color: #f8fafc;">
+<div style="font-family: system-ui, -apple-system, Segoe UI, sans-serif; color: #0f172a; line-height: 1.45; font-size: 15px;">
   <div style="background-color: #1e6eeb; border: 1px solid #1458c3; border-radius: 8px; padding: 14px; margin-bottom: 12px;">
     <h3 style="margin: 0 0 6px 0; font-size: 18px; color: #ffffff;">Training plan options</h3>
     <p style="margin: 0; color: #fbfdff;">Three coach-ready drafts for <strong>{escape(player_name)}</strong>. Choose one using the native action below.</p>
@@ -148,7 +149,7 @@ def _render_answer_text(answer, status):
 
 def _status_from_answer(answer):
     text = str(answer or "")
-    for status in ("MISSED", "COMPLETED", "IN_PROGRESS"):
+    for status in ("MISSED", "COMPLETED", "IN_PROGRESS", "NOT_STARTED"):
         if _status_pattern(status).search(text):
             return status
     return ""
@@ -157,6 +158,8 @@ def _status_from_answer(answer):
 def _status_pattern(status):
     if status == "IN_PROGRESS":
         return re.compile(r"\bIN[_\s-]?PROGRESS\b", flags=re.IGNORECASE)
+    if status == "NOT_STARTED":
+        return re.compile(r"\bNOT[_\s-]?STARTED\b", flags=re.IGNORECASE)
     return re.compile(rf"\b{status}\b", flags=re.IGNORECASE)
 
 
@@ -165,6 +168,8 @@ def _status_accent_color(status):
         return "#22c55e"
     if status == "MISSED":
         return "#ef4444"
+    if status == "NOT_STARTED":
+        return "#64748b"
     return "#1e6eeb"
 
 
@@ -173,6 +178,8 @@ def _status_chip_background(status):
         return "#dcfce7"
     if status == "MISSED":
         return "#fee2e2"
+    if status == "NOT_STARTED":
+        return "#f1f5f9"
     return "#dbeafe"
 
 
@@ -181,4 +188,6 @@ def _status_chip_text_color(status):
         return "#166534"
     if status == "MISSED":
         return "#991b1b"
+    if status == "NOT_STARTED":
+        return "#475569"
     return "#1458c3"
