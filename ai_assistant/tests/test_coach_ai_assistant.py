@@ -343,6 +343,8 @@ class CoachAIAssistantTests(TestCase):
         self.assertIn("border-left: 4px solid #22c55e", response.data["html"])
         self.assertIn("background-color: #ffffff", response.data["html"])
         self.assertIn("border: 1px solid #dbe5f0", response.data["html"])
+        self.assertIn("width: 100%", response.data["html"])
+        self.assertIn("box-sizing: border-box", response.data["html"])
         self.assertIn("COMPLETED", response.data["html"])
         self.assertNotIn("box-shadow", response.data["html"])
         self.assertNotIn("#f8fafc", response.data["html"])
@@ -362,6 +364,8 @@ class CoachAIAssistantTests(TestCase):
         self.assertIn("border-left: 4px solid #64748b", not_started_html)
         self.assertIn("background-color: #ffffff", completed_html)
         self.assertIn("border: 1px solid #dbe5f0", completed_html)
+        self.assertIn("width: 100%", completed_html)
+        self.assertIn("box-sizing: border-box", completed_html)
         self.assertNotIn("box-shadow", completed_html)
         self.assertNotIn("#f8fafc", completed_html)
 

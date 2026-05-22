@@ -45,10 +45,12 @@ def render_answer_html(answer):
     accent_color = _status_accent_color(status)
     html = (
         '<div style="font-family: system-ui, -apple-system, Segoe UI, sans-serif; color: #0f172a; '
-        'line-height: 1.45; font-size: 15px; background-color: #ffffff; border: 1px solid #dbe5f0; '
+        'line-height: 1.45; font-size: 15px; background-color: #ffffff; width: 100%; '
+        'box-sizing: border-box; margin: 0; padding: 0;">'
+        '<div style="background-color: #ffffff; border: 1px solid #dbe5f0; '
         f'border-left: 4px solid {accent_color}; border-radius: 8px; padding: 14px;">'
         f'<p style="margin: 0; color: #0f172a;">{_render_answer_text(answer or "", status)}</p>'
-        "</div>"
+        "</div></div>"
     )
     return sanitize_assistant_html(html)
 
@@ -56,7 +58,7 @@ def render_answer_html(answer):
 def render_plan_options_html(*, player_name, options):
     option_cards = "\n".join(render_plan_option_card(option) for option in options)
     html = f"""
-<div style="font-family: system-ui, -apple-system, Segoe UI, sans-serif; color: #0f172a; line-height: 1.45; font-size: 15px;">
+<div style="font-family: system-ui, -apple-system, Segoe UI, sans-serif; color: #0f172a; line-height: 1.45; font-size: 15px; background-color: #ffffff; width: 100%; box-sizing: border-box; margin: 0; padding: 0;">
   <div style="background-color: #1e6eeb; border: 1px solid #1458c3; border-radius: 8px; padding: 14px; margin-bottom: 12px;">
     <h3 style="margin: 0 0 6px 0; font-size: 18px; color: #ffffff;">Training plan options</h3>
     <p style="margin: 0; color: #fbfdff;">Three coach-ready drafts for <strong>{escape(player_name)}</strong>. Choose one using the native action below.</p>
