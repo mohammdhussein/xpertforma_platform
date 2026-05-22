@@ -224,18 +224,25 @@ PASSWORD_SETUP_DEEP_LINK_BASE = os.getenv(
 )
 
 AI_ASSISTANT_ENABLED = os.getenv("AI_ASSISTANT_ENABLED", "False") == "True"
-AI_PROVIDER = os.getenv("AI_PROVIDER", "ollama")
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
-GEMINI_FALLBACK_MODEL = os.getenv("GEMINI_FALLBACK_MODEL", "gemini-2.5-flash-lite")
-OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
-OLLAMA_CHAT_MODEL = os.getenv("OLLAMA_CHAT_MODEL", "qwen3:4b")
-OLLAMA_FALLBACK_MODEL = os.getenv("OLLAMA_FALLBACK_MODEL", "llama3.2:3b")
-OLLAMA_NUM_PREDICT = int(os.getenv("OLLAMA_NUM_PREDICT", "220"))
-AI_RESPONSE_TEMPERATURE = float(os.getenv("AI_RESPONSE_TEMPERATURE", "0"))
+
+# Use groq now
+AI_PROVIDER = os.getenv("AI_PROVIDER", "groq")
+
+# Groq config
+GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
+GROQ_BASE_URL = os.getenv("GROQ_BASE_URL", "https://api.groq.com/openai/v1")
+GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+GROQ_FALLBACK_MODEL = os.getenv("GROQ_FALLBACK_MODEL", "openai/gpt-oss-20b")
+
+# AI behavior
+AI_RESPONSE_TEMPERATURE = float(os.getenv("AI_RESPONSE_TEMPERATURE", "0.2"))
 AI_RANDOM_SEED = int(os.getenv("AI_RANDOM_SEED", "7"))
 AI_MAX_CONTEXT_DAYS = int(os.getenv("AI_MAX_CONTEXT_DAYS", "14"))
 AI_MAX_HISTORY_MESSAGES = int(os.getenv("AI_MAX_HISTORY_MESSAGES", "8"))
 AI_CONVERSATION_CACHE_TTL_SECONDS = int(os.getenv("AI_CONVERSATION_CACHE_TTL_SECONDS", "1800"))
+
+# HTML response
+AI_DEFAULT_RESPONSE_FORMAT = os.getenv("AI_DEFAULT_RESPONSE_FORMAT", "html")
+AI_PLAN_OPTIONS_COUNT = int(os.getenv("AI_PLAN_OPTIONS_COUNT", "3"))
 
 AUTH_USER_MODEL = "accounts.User"

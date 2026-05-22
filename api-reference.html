@@ -604,101 +604,92 @@
         <h2>AI Assistant</h2>
 
         <div class="endpoint"
-             data-search="POST /api/ai/chat ai assistant ollama gemini backend data message screen selected_player_id history answer cards actions suggested_questions">
+             data-search="POST /api/ai/chat ai assistant chatbot agent groq training plans message response_format html draft_id option_id select_plan_option select_player start_date end_date">
             <div><span class="badge post">POST</span><span class="path">/api/ai/chat/</span></div>
-            <p class="meta">Authenticated player or approved coach only. Sends a short, role-scoped question to the
-                XpertForma backend data assistant. The mobile app calls Django only; Django blocks unrelated questions,
-                routes the request to safe backend data sources, and builds compact permission-scoped facts. Clear
-                factual questions such as profile/account fields, today's sessions, latest sessions, attendance
-                summaries, readiness check-ins, and attention reasons can be answered directly by Django for lower
-                latency; other backend-data questions
-                call the configured server-side AI provider for the final JSON response. The endpoint is disabled unless
-                <code>AI_ASSISTANT_ENABLED=True</code>. Local development can use <code>AI_PROVIDER=ollama</code>;
-                Gemini is also supported with a server-side key.</p>
+            <p class="meta">Authenticated player or approved coach. This endpoint is chatbot, app-data assistant, and
+                agent in one endpoint: app-data questions such as latest sessions, attendance, progress, readiness,
+                players, and plans are answered from permission-scoped Django backend context; normal non-data messages
+                get a concise Groq chatbot answer; coach plan requests for one or more players trigger the server-side
+                agent workflow. The mobile app sends a message to Django only; Django detects player names from the message inside the
+                signed-in coach's roster, calls Groq server-side when needed, stores generated plan options as a
+                server-side draft, renders safe mobile HTML, and returns native actions for Kotlin Compose buttons.
+                The mobile app must not send player IDs, role, coach IDs, screen context, or HTML.</p>
             <div class="grid">
                 <div class="card">
                     <h4>Request Body</h4>
                     <pre>{
-  "message": "How many sessions did I complete this week?",
-  "screen": "PLAYER_PROGRESS",
-  "selected_player_id": null,
-  "history": []
-}</pre>
-                </div>
-                <div class="card">
-                    <h4>Coach Body</h4>
-                    <pre>{
-  "message": "Who needs attention today?",
-  "screen": "COACH_DASHBOARD",
-  "selected_player_id": null,
-  "history": []
+  "message": "Suggest 3 plans for Ahmad",
+  "response_format": "html"
 }</pre>
                     <pre>{
-  "message": "What is this player's attendance this month?",
-  "screen": "COACH_PLAYER_PROFILE",
-  "selected_player_id": "player-uuid",
-  "history": []
+  "message": "Suggest 3 training plans for Omar and Kareem",
+  "response_format": "html"
 }</pre>
                     <pre>{
-  "message": "why?",
-  "screen": "COACH_PLAYER_PROFILE",
-  "selected_player_id": "player-uuid",
-  "history": [
-    {
-      "role": "user",
-      "content": "Why does this player need attention?"
-    },
-    {
-      "role": "assistant",
-      "content": "This player needs attention because he missed the latest session."
-    }
-  ]
+  "message": "Suggest 3 training plans for Omar and Kareem Abo Salah both to start from the current day and to end in the tomorrow day",
+  "response_format": "html"
 }</pre>
                 </div>
                 <div class="card">
                     <h4>Response 200</h4>
                     <pre>{
-  "answer": "Today, you have 2 sessions: Speed on 2026-05-08 from 21:20:00 to 22:20:00 (NOT_STARTED); Stamina on 2026-05-08 from 21:10:00 to 22:07:00 (COMPLETED).",
-  "cards": [
-    {
-      "title": "Speed",
-      "value": "Speed on 2026-05-08 from 21:20:00 to 22:20:00 (NOT_STARTED)",
-      "severity": "INFO"
-    }
-  ],
+  "answer": "I can help with training, recovery, players, and plan creation.",
+  "render_type": "html",
+  "html": "&lt;div style=\"...\"&gt;I can help with training...&lt;/div&gt;",
+  "cards": [],
   "actions": [],
   "suggested_questions": [
-    "What is my next session?",
-    "Did I attend today's session?",
-    "Show my attendance summary"
+    "Suggest 3 training plans for one of my players",
+    "How should I structure this week's training?",
+    "What can you help me do as a coach?"
   ]
 }</pre>
                     <pre>{
-  "answer": "Your recovery is lower today mainly because your sleep quality was poor and your readiness score is not high. Focus on rest, hydration, and tell your coach if soreness continues.",
-  "cards": [
+  "answer": "I drafted 3 training plan options for Ahmad Saleh.",
+  "render_type": "html",
+  "html": "&lt;div style=\"...\"&gt;...safe plan cards with Start date, End date, Start, and End labels...&lt;/div&gt;",
+  "cards": [],
+  "actions": [
     {
-      "title": "Main factor",
-      "value": "Poor sleep",
-      "severity": "WARNING"
+      "type": "select_plan_option",
+      "label": "Use Speed Plan",
+      "draft_id": "server-side-draft-uuid",
+      "option_id": "option_1",
+      "requires_confirmation": true
     }
   ],
-  "actions": [],
   "suggested_questions": [
-    "How can I improve recovery?",
-    "What should I focus on today?"
+    "Suggest 3 recovery plans for Ahmad Saleh",
+    "Suggest 3 speed plans for Ahmad Saleh",
+    "How should I choose between these plans?"
   ]
 }</pre>
                 </div>
                 <div class="card">
-                    <h4>Out Of Scope Response 200</h4>
+                    <h4>Multiple Player Match</h4>
                     <pre>{
-  "answer": "I can only help with information related to your XpertForma backend data, such as profiles, sessions, attendance, performance, readiness, progress, plans, players, and coach insights.",
+  "answer": "I found more than one matching player. Please choose the player before I draft plans.",
+  "render_type": "html",
+  "html": "&lt;div style=\"...\"&gt;I found more than one matching player...&lt;/div&gt;",
   "cards": [],
-  "actions": [],
+  "actions": [
+    {
+      "type": "select_player",
+      "label": "Use Ahmad Saleh",
+      "player_id": "player-uuid",
+      "player": {
+        "id": "player-uuid",
+        "name": "Ahmad Saleh",
+        "position": { "id": 12, "name": "Striker", "code": "ST" },
+        "avatar_url": null
+      },
+      "requires_confirmation": false
+    }
+  ],
   "suggested_questions": [
-    "What is my latest session?",
-    "How is my weekly progress?",
-    "Show my attendance summary"
+    "Suggest 3 plans using the full player name",
+    "What details can help identify the player?",
+    "How should I choose a plan focus?"
   ]
 }</pre>
                 </div>
@@ -706,34 +697,116 @@
                     <h4>Expected Values</h4>
                     <ul>
                         <li><code>message</code>: required string, max 2000 characters.</li>
-                        <li><code>screen</code>: optional string; defaults to <code>UNKNOWN</code>.</li>
-                        <li><code>selected_player_id</code>: optional UUID/null. Players cannot use it. Coaches can use
-                            it only for players they are allowed to access.</li>
-                        <li><code>history</code>: optional recent chat turns, newest last. Each item has
-                            <code>role</code> as <code>user</code> or <code>assistant</code> and <code>content</code>
-                            up to 2000 characters. Used only to resolve follow-up wording like <code>why?</code> or
-                            <code>why he need attention?</code>; facts still come from permission-scoped backend data.</li>
-                        <li>Allowed scope: safe authenticated XpertForma backend data including profiles, players,
-                            coaches, teams, sessions, plans, attendance, performance, progress, readiness, check-ins,
-                            dashboard stats, alerts, positions, and staff summaries.</li>
-                        <li>Blocked examples: code, jokes, capitals, history, politics, math, weather, news, recipes,
-                            movies, songs, and general programming.</li>
-                        <li>Django calculates factual profile fields, counts, percentages, latest records, sessions,
-                            attendance, readiness, and attention reasons before any model call. When the answer is clear
-                            from those facts, Django returns the response directly without waiting for Ollama/Gemini.</li>
-                        <li><code>cards[].severity</code>: <code>INFO</code> | <code>WARNING</code> |
-                            <code>CRITICAL</code>.</li>
-                        <li>AI provider credentials and local Ollama URLs stay server-side and are never exposed to
-                            mobile clients.</li>
+                        <li><code>response_format</code>: optional, currently <code>html</code>.</li>
+                        <li>Rejected request fields: <code>selected_player_id</code>, <code>screen_context</code>,
+                            <code>user_id</code>, <code>coach_id</code>, <code>role</code>, <code>html</code>, and
+                            <code>player_id</code>.</li>
+                        <li>Normal chatbot answers return the same mobile response shape with empty
+                            <code>actions</code> and three <code>suggested_questions</code>.</li>
+                        <li><code>suggested_questions</code>: always present on successful assistant responses and
+                            contains up to three follow-up prompts.</li>
+                        <li>Plan requests can name one player or multiple players, for example
+                            <code>Suggest 3 training plans for Omar and Kareem</code>. If each name resolves to exactly
+                            one player owned by the signed-in coach, Django saves one draft for all matched players and
+                            confirmation assigns the created plan to all of them.</li>
+                        <li>Plan requests can include simple natural date wording such as
+                            <code>start from the current day</code>, <code>start today</code>, and
+                            <code>end in the tomorrow day</code>. When detected, Django passes the requested range to
+                            Groq, stores it in the draft options, renders <code>Start date</code> and
+                            <code>End date</code> chips in the HTML, and validates that all preview sessions stay inside
+                            the range.</li>
+                        <li>If a requested name matches multiple roster players, Django returns
+                            <code>select_player</code> actions instead of guessing.</li>
+                        <li>For plan requests, Groq must return structured JSON with exactly three options. If Groq
+                            returns the wrong shape or option count, Django sends one repair prompt before returning an
+                            invalid-response error. Django converts valid JSON into sanitized HTML and never trusts
+                            model-generated HTML.</li>
+                        <li>Plan HTML uses only <code>div</code>, <code>p</code>, <code>h3</code>, <code>h4</code>,
+                            <code>span</code>, <code>strong</code>, <code>b</code>, <code>ul</code>, <code>li</code>,
+                            and <code>br</code>, with inline <code>style</code> attributes only. JavaScript, forms,
+                            external CSS, external images, scripts, and buttons inside HTML are not allowed. Plan cards
+                            include explicit session <code>Start</code> and <code>End</code> time labels.</li>
+                        <li>Assistant HTML uses the app theme colors: primary <code>#1e6eeb</code>, primary gradient
+                            <code>#2f78ef</code>, primary hover <code>#1458c3</code>, secondary <code>#22c55e</code>,
+                            orange <code>#f59e0b</code>, danger <code>#ef4444</code>, text <code>#0f172a</code>,
+                            muted <code>#64748b</code>, border <code>#dbe5f0</code>, background
+                            <code>#f8fafc</code>, soft background <code>#fbfdff</code>, and surface
+                            <code>#ffffff</code>.</li>
+                        <li><code>actions[]</code> are rendered by the mobile app as native Kotlin Compose controls.</li>
                     </ul>
                 </div>
                 <div class="card">
                     <h4>Error Notes</h4>
-                    <pre>HTTP 400   validation error, including missing message
+                    <pre>HTTP 400   validation error, unsupported request field, invalid selected option, expired draft
 HTTP 401   missing or invalid JWT
-HTTP 403   unsupported role or unapproved coach
+HTTP 403   player account, unapproved coach, draft owned by another coach, or player no longer owned by coach
+HTTP 502   { "detail": "Groq returned an invalid plan response." }
 HTTP 503   { "detail": "AI assistant is disabled" }
-HTTP 503   { "detail": "AI service is unavailable" }</pre>
+HTTP 503   { "detail": "Missing GROQ_API_KEY." }
+HTTP 503   { "detail": "Groq service is unavailable." }
+HTTP 503   { "detail": "Groq service is unavailable. Provider status: 429." }
+HTTP 504   { "detail": "Groq request timed out." }</pre>
+                </div>
+            </div>
+        </div>
+
+        <div class="endpoint"
+             data-search="POST /api/ai/actions/confirm ai assistant confirm create_training_plan_from_option draft_id selected_option_id">
+            <div><span class="badge post">POST</span><span class="path">/api/ai/actions/confirm/</span></div>
+            <p class="meta">Authenticated approved coach only. Confirms one server-side AI plan draft option and creates
+                the training plan through the same coach plan creation service used by <code>/api/coach/plans/</code>.</p>
+            <div class="grid">
+                <div class="card">
+                    <h4>Request Body</h4>
+                    <pre>{
+  "action_type": "create_training_plan_from_option",
+  "draft_id": "draft-uuid",
+  "selected_option_id": "option_1"
+}</pre>
+                </div>
+                <div class="card">
+                    <h4>Response 201</h4>
+                    <pre>{
+  "status": "success",
+  "message": "Training plan (with sessions and players) created successfully.",
+  "plan": {
+    "plan_id": "uuid",
+    "title": "Speed Plan",
+    "start_date": "2026-05-23",
+    "end_date": "2026-05-29",
+    "status": "DRAFT",
+    "total_sessions": null,
+    "assigned_players_count": null
+  },
+  "sessions": [
+    {
+      "session_id": "uuid",
+      "plan": "plan-uuid",
+      "session_date": "2026-05-23",
+      "title": "Acceleration Mechanics",
+      "session_type": "INDIVIDUAL",
+      "start_time": "09:00:00",
+      "end_time": "10:00:00",
+      "intensity": "HIGH",
+      "location": "Main Field",
+      "notes": "Sprint mechanics and recovery spacing"
+    }
+  ],
+  "assigned_player_ids": ["player-uuid"]
+}</pre>
+                </div>
+                <div class="card">
+                    <h4>Expected Values</h4>
+                    <ul>
+                        <li><code>action_type</code>: must be
+                            <code>create_training_plan_from_option</code>.</li>
+                        <li><code>draft_id</code>: server-side draft UUID returned by chat actions.</li>
+                        <li><code>selected_option_id</code>: one of the option IDs in the saved draft, such as
+                            <code>option_1</code>.</li>
+                        <li>Before saving, Django validates coach ownership, draft expiry, player ownership, selected
+                            option existence, plan date order, session date range, session type, intensity, and session
+                            time order.</li>
+                    </ul>
                 </div>
             </div>
         </div>
