@@ -702,7 +702,10 @@
                             <code>user_id</code>, <code>coach_id</code>, <code>role</code>, <code>html</code>, and
                             <code>player_id</code>.</li>
                         <li>Normal chatbot answers return the same mobile response shape with empty
-                            <code>actions</code> and three <code>suggested_questions</code>.</li>
+                            <code>actions</code> and three <code>suggested_questions</code>. Normal answer HTML is
+                            rendered without a full outer card and uses a left accent stripe; session-status answers use
+                            green for <code>COMPLETED</code>, red for <code>MISSED</code>, and blue for
+                            <code>IN_PROGRESS</code>.</li>
                         <li><code>suggested_questions</code>: always present on successful assistant responses and
                             contains up to three follow-up prompts.</li>
                         <li>Plan requests can name one player or multiple players, for example

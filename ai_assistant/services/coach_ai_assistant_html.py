@@ -1,3 +1,4 @@
+import re
 from html import escape
 
 import bleach
@@ -40,11 +41,12 @@ ALLOWED_CSS_PROPERTIES = [
 
 
 def render_answer_html(answer):
+    status = _status_from_answer(answer)
+    accent_color = _status_accent_color(status)
     html = (
         '<div style="font-family: system-ui, -apple-system, Segoe UI, sans-serif; color: #0f172a; '
-        'line-height: 1.45; font-size: 15px; background-color: #ffffff; border: 1px solid #dbe5f0; '
-        'border-left: 4px solid #1e6eeb; border-radius: 8px; padding: 14px; box-shadow: 0 10px 24px #dbe5f0;">'
-        f'<p style="margin: 0; color: #0f172a;">{escape(answer or "")}</p>'
+        f'line-height: 1.45; font-size: 15px; border-left: 4px solid {accent_color}; padding: 6px 0 6px 12px;">'
+        f'<p style="margin: 0; color: #0f172a;">{_render_answer_text(answer or "", status)}</p>'
         "</div>"
     )
     return sanitize_assistant_html(html)
@@ -119,3 +121,64 @@ def sanitize_assistant_html(html):
         css_sanitizer=css_sanitizer,
         strip=True,
     )
+
+
+def _render_answer_text(answer, status):
+    if not status:
+        return escape(answer)
+
+    pattern = _status_pattern(status)
+    match = pattern.search(answer)
+    if not match:
+        return escape(answer)
+
+    prefix = answer[:match.start()].rstrip()
+    suffix = answer[match.end():]
+    if prefix.endswith("("):
+        prefix = prefix[:-1].rstrip()
+    suffix = re.sub(r"^\)", "", suffix).lstrip()
+
+    chip = (
+        f'<span style="display: inline-block; background-color: {_status_chip_background(status)}; '
+        f'color: {_status_chip_text_color(status)}; border-radius: 8px; padding: 3px 8px; '
+        f'margin: 0 2px; font-size: 12px; font-weight: 700;">{escape(status)}</span>'
+    )
+    return f"{escape(prefix)} {chip}{escape(suffix)}".strip()
+
+
+def _status_from_answer(answer):
+    text = str(answer or "")
+    for status in ("MISSED", "COMPLETED", "IN_PROGRESS"):
+        if _status_pattern(status).search(text):
+            return status
+    return ""
+
+
+def _status_pattern(status):
+    if status == "IN_PROGRESS":
+        return re.compile(r"\bIN[_\s-]?PROGRESS\b", flags=re.IGNORECASE)
+    return re.compile(rf"\b{status}\b", flags=re.IGNORECASE)
+
+
+def _status_accent_color(status):
+    if status == "COMPLETED":
+        return "#22c55e"
+    if status == "MISSED":
+        return "#ef4444"
+    return "#1e6eeb"
+
+
+def _status_chip_background(status):
+    if status == "COMPLETED":
+        return "#dcfce7"
+    if status == "MISSED":
+        return "#fee2e2"
+    return "#dbeafe"
+
+
+def _status_chip_text_color(status):
+    if status == "COMPLETED":
+        return "#166534"
+    if status == "MISSED":
+        return "#991b1b"
+    return "#1458c3"

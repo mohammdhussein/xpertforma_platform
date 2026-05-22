@@ -11,8 +11,9 @@ from rest_framework.test import APIClient
 from accounts.models import CoachProfile, PlayerProfile, Position, Role, User, UserRole
 from ai_assistant.models import AIPlanDraft
 from ai_assistant.services.coach_ai_assistant_groq import GroqChatClient, GroqServiceUnavailable, GroqTimeout
+from ai_assistant.services.coach_ai_assistant_html import render_answer_html
 from ai_assistant.services.coach_ai_assistant_plans import parse_plan_options
-from training.models import TrainingPlan, TrainingPlanPlayer, TrainingSession
+from training.models import SessionLifecycle, TrainingPlan, TrainingPlanPlayer, TrainingSession
 
 
 CHAT_URL = "/api/ai/chat/"
@@ -310,6 +311,52 @@ class CoachAIAssistantTests(TestCase):
         self.assertEqual(response.data["actions"], [])
         self.assertEqual(len(response.data["suggested_questions"]), 3)
         mock_chat.assert_not_called()
+
+    @override_settings(AI_ASSISTANT_ENABLED=True, GROQ_API_KEY="test-key")
+    def test_latest_session_html_uses_completed_status_accent(self):
+        today = timezone.localdate()
+        plan = TrainingPlan.objects.create(
+            creator=self.coach,
+            title="Completed Backend Plan",
+            start_date=today,
+            end_date=today,
+        )
+        TrainingPlanPlayer.objects.create(plan=plan, player=self.player, assigned_by=self.coach)
+        session = TrainingSession.objects.create(
+            plan=plan,
+            title="Backend Latest Session",
+            session_date=today,
+            start_time=time(9, 0),
+            end_time=time(10, 0),
+        )
+        SessionLifecycle.objects.create(session=session, status=SessionLifecycle.COMPLETED)
+
+        with patch("ai_assistant.services.coach_ai_assistant_groq.GroqChatClient.chat_text") as mock_chat:
+            response = self.client.post(
+                CHAT_URL,
+                {"message": "what is the latest session?"},
+                format="json",
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("Backend Latest Session", response.data["answer"])
+        self.assertIn("border-left: 4px solid #22c55e", response.data["html"])
+        self.assertIn("COMPLETED", response.data["html"])
+        self.assertNotIn("box-shadow", response.data["html"])
+        self.assertNotIn("border: 1px solid #dbe5f0", response.data["html"])
+        self.assertEqual(response.data["actions"], [])
+        self.assertEqual(len(response.data["suggested_questions"]), 3)
+        mock_chat.assert_not_called()
+
+    def test_answer_html_status_accent_colors(self):
+        completed_html = render_answer_html("Your latest session was Speed (COMPLETED).")
+        missed_html = render_answer_html("Your latest session was Speed (MISSED).")
+        in_progress_html = render_answer_html("Your current session is Speed (IN_PROGRESS).")
+
+        self.assertIn("border-left: 4px solid #22c55e", completed_html)
+        self.assertIn("border-left: 4px solid #ef4444", missed_html)
+        self.assertIn("border-left: 4px solid #1e6eeb", in_progress_html)
+        self.assertNotIn("box-shadow", completed_html)
 
     @override_settings(AI_ASSISTANT_ENABLED=True, GROQ_API_KEY="test-key")
     def test_selected_player_id_is_rejected(self):
