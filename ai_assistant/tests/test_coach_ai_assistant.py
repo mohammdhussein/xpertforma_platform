@@ -11,7 +11,7 @@ from rest_framework.test import APIClient
 from accounts.models import CoachProfile, PlayerProfile, Position, Role, User, UserRole
 from ai_assistant.models import AIPlanDraft
 from ai_assistant.services.coach_ai_assistant_groq import GroqChatClient, GroqServiceUnavailable, GroqTimeout
-from ai_assistant.services.coach_ai_assistant_html import render_answer_html
+from ai_assistant.services.coach_ai_assistant_html import render_answer_html, sanitize_assistant_html
 from ai_assistant.services.coach_ai_assistant_plans import parse_plan_options
 from training.models import SessionLifecycle, TrainingPlan, TrainingPlanPlayer, TrainingSession
 
@@ -27,9 +27,8 @@ def make_user_with_role(*, email, name, role_name, password="StrongPass123!"):
     return user
 
 
-def make_plan_options_response():
-    return json.dumps(
-        {
+def make_plan_options_response(option_count=3):
+    payload = {
             "options": [
                 {
                     "option_id": "option_1",
@@ -106,13 +105,12 @@ def make_plan_options_response():
                 },
             ]
         }
-    )
+    payload["options"] = payload["options"][:option_count]
+    return json.dumps(payload)
 
 
 def make_one_option_response():
-    payload = json.loads(make_plan_options_response())
-    payload["options"] = payload["options"][:1]
-    return json.dumps(payload)
+    return make_plan_options_response(option_count=1)
 
 
 def make_two_day_plan_options_response():
@@ -369,6 +367,18 @@ class CoachAIAssistantTests(TestCase):
         self.assertNotIn("box-shadow", completed_html)
         self.assertNotIn("#f8fafc", completed_html)
 
+    def test_assistant_html_sanitizer_strips_unsafe_markup(self):
+        clean = sanitize_assistant_html(
+            '<div style="color: #1e6eeb;"><script>alert(1)</script><button>Use</button>'
+            '<img src="https://example.com/a.png"><span style="color: #1458c3;">Safe</span></div>'
+        )
+
+        self.assertNotIn("<script", clean.lower())
+        self.assertNotIn("<button", clean.lower())
+        self.assertNotIn("<img", clean.lower())
+        self.assertIn("color: #1e6eeb", clean)
+        self.assertIn("color: #1458c3", clean)
+
     @override_settings(AI_ASSISTANT_ENABLED=True, GROQ_API_KEY="test-key")
     def test_selected_player_id_is_rejected(self):
         response = self.client.post(
@@ -467,11 +477,16 @@ class CoachAIAssistantTests(TestCase):
         self.assertIn("#1e6eeb", response.data["html"])
         self.assertIn("#dbe5f0", response.data["html"])
         self.assertIn("#0f172a", response.data["html"])
-        self.assertNotIn("#f8fafc", response.data["html"])
-        self.assertIn("Start date:", response.data["html"])
-        self.assertIn("End date:", response.data["html"])
-        self.assertIn("Start: 09:00", response.data["html"])
-        self.assertIn("End: 10:00", response.data["html"])
+        self.assertIn("#f8fafc", response.data["html"])
+        self.assertIn("max-width: 720px", response.data["html"])
+        self.assertIn("border-radius: 22px", response.data["html"])
+        self.assertIn("0 4px 14px rgba(15,23,42,0.06)", response.data["html"])
+        self.assertIn("Three clean drafts for <strong>Ahmad Saleh</strong>", response.data["html"])
+        self.assertIn("<strong style=\"color: #0f172a;\">2 sessions</strong> &middot;", response.data["html"])
+        self.assertIn("May", response.data["html"])
+        self.assertIn("09:00&ndash;10:00", response.data["html"])
+        self.assertIn("Day 1 &middot; Acceleration Mechanics", response.data["html"])
+        self.assertIn("Individual", response.data["html"])
         self.assertNotIn("<script", response.data["html"].lower())
         self.assertEqual(len(response.data["actions"]), 3)
         self.assertEqual(len(response.data["suggested_questions"]), 3)
@@ -553,12 +568,16 @@ class CoachAIAssistantTests(TestCase):
 
         today = timezone.localdate()
         tomorrow = today + timedelta(days=1)
+        if today.year == tomorrow.year and today.month == tomorrow.month:
+            expected_date_summary = f"{today.strftime('%b')} {today.day}&ndash;{tomorrow.day}, {today.year}"
+        else:
+            expected_date_summary = (
+                f"{today.strftime('%b')} {today.day}&ndash;{tomorrow.strftime('%b')} {tomorrow.day}, {today.year}"
+            )
         self.assertEqual(response.status_code, 200)
         self.assertIn("Omar Fatoom and Kareem Abo Salah", response.data["answer"])
-        self.assertIn(f"Start date: {today.isoformat()}", response.data["html"])
-        self.assertIn(f"End date: {tomorrow.isoformat()}", response.data["html"])
-        self.assertIn("Start: 09:00", response.data["html"])
-        self.assertIn("End: 10:00", response.data["html"])
+        self.assertIn(expected_date_summary, response.data["html"])
+        self.assertIn("09:00&ndash;10:00", response.data["html"])
 
         draft = AIPlanDraft.objects.get()
         self.assertEqual(
@@ -567,6 +586,45 @@ class CoachAIAssistantTests(TestCase):
         )
         self.assertEqual(draft.options[0]["start_date"], today.isoformat())
         self.assertEqual(draft.options[0]["end_date"], tomorrow.isoformat())
+
+    @override_settings(AI_ASSISTANT_ENABLED=True, GROQ_API_KEY="test-key")
+    def test_plan_suggestion_supports_requested_option_count(self):
+        with patch(
+            "ai_assistant.services.coach_ai_assistant_groq.GroqChatClient.chat_json",
+            return_value=make_plan_options_response(option_count=2),
+        ) as mock_chat:
+            response = self.client.post(
+                CHAT_URL,
+                {"message": "Suggest 2 plans for Ahmad"},
+                format="json",
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["answer"], "I drafted 2 training plan options for Ahmad Saleh.")
+        self.assertEqual(len(response.data["actions"]), 2)
+        self.assertIn("Two clean drafts for <strong>Ahmad Saleh</strong>", response.data["html"])
+        draft = AIPlanDraft.objects.get()
+        self.assertEqual(len(draft.options), 2)
+
+        user_prompt = json.loads(mock_chat.call_args.kwargs["user_prompt"])
+        self.assertIn("exactly 2 training plan options", user_prompt["task"])
+        self.assertIn("Return exactly 2 options.", user_prompt["rules"])
+        self.assertIn("Use option_id values option_1, option_2.", user_prompt["rules"])
+
+    @override_settings(AI_ASSISTANT_ENABLED=True, GROQ_API_KEY="test-key")
+    def test_plan_suggestion_rejects_out_of_range_option_count_before_groq(self):
+        with patch("ai_assistant.services.coach_ai_assistant_groq.GroqChatClient.chat_json") as mock_chat:
+            response = self.client.post(
+                CHAT_URL,
+                {"message": "Suggest 8 plans for Ahmad"},
+                format="json",
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("between 1 and 5", response.data["answer"])
+        self.assertEqual(response.data["actions"], [])
+        self.assertEqual(AIPlanDraft.objects.count(), 0)
+        mock_chat.assert_not_called()
 
     @override_settings(AI_ASSISTANT_ENABLED=True, GROQ_API_KEY="test-key")
     def test_confirm_endpoint_creates_selected_plan_for_multiple_players(self):
@@ -648,6 +706,24 @@ class CoachAIAssistantTests(TestCase):
         self.assertEqual(plan.creator, self.coach)
         self.assertEqual(TrainingPlanPlayer.objects.get(plan=plan).player, self.player)
         self.assertEqual(TrainingSession.objects.filter(plan=plan).count(), 2)
+
+    @override_settings(AI_ASSISTANT_ENABLED=True, GROQ_API_KEY="test-key")
+    def test_confirm_endpoint_accepts_chat_action_payload(self):
+        draft = self._create_draft()
+
+        response = self.client.post(
+            CONFIRM_URL,
+            {
+                "action_type": "select_plan_option",
+                "draft_id": str(draft.draft_id),
+                "option_id": "option_1",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.data["status"], "success")
+        self.assertEqual(TrainingPlan.objects.get().title, "Speed Plan")
 
     @override_settings(AI_ASSISTANT_ENABLED=True, GROQ_API_KEY="test-key")
     def test_coach_cannot_confirm_another_coachs_draft(self):

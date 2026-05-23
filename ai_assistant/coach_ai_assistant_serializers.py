@@ -30,6 +30,23 @@ class AIChatRequestSerializer(StrictFieldsSerializer):
 
 
 class AIActionConfirmRequestSerializer(StrictFieldsSerializer):
-    action_type = serializers.ChoiceField(choices=("create_training_plan_from_option",))
+    action_type = serializers.ChoiceField(
+        choices=("create_training_plan_from_option", "select_plan_option"),
+    )
     draft_id = serializers.UUIDField()
-    selected_option_id = serializers.CharField(max_length=40, trim_whitespace=True)
+    selected_option_id = serializers.CharField(max_length=40, trim_whitespace=True, required=False)
+    option_id = serializers.CharField(max_length=40, trim_whitespace=True, required=False)
+
+    def validate(self, attrs):
+        selected_option_id = attrs.get("selected_option_id")
+        option_id = attrs.get("option_id")
+        if selected_option_id and option_id and selected_option_id != option_id:
+            raise serializers.ValidationError(
+                {"detail": "selected_option_id and option_id must match when both are provided."}
+            )
+        if not selected_option_id and not option_id:
+            raise serializers.ValidationError(
+                {"detail": "selected_option_id or option_id is required."}
+            )
+        attrs["selected_option_id"] = selected_option_id or option_id
+        return attrs

@@ -3,6 +3,7 @@ from html import escape
 
 import bleach
 from bleach.css_sanitizer import CSSSanitizer
+from django.utils.dateparse import parse_date
 
 
 ALLOWED_TAGS = ["div", "p", "h3", "h4", "span", "strong", "b", "ul", "li", "br"]
@@ -37,6 +38,7 @@ ALLOWED_CSS_PROPERTIES = [
     "padding-top",
     "text-align",
     "width",
+    "word-break",
 ]
 
 
@@ -56,63 +58,120 @@ def render_answer_html(answer):
 
 
 def render_plan_options_html(*, player_name, options):
-    option_cards = "\n".join(render_plan_option_card(option) for option in options)
+    option_cards = "\n".join(
+        render_plan_option_card(option, index=index)
+        for index, option in enumerate(options, start=1)
+    )
+    option_count = len(options)
+    count_label = _count_label(option_count)
+    draft_label = "draft" if option_count == 1 else "drafts"
     html = f"""
-<div style="font-family: system-ui, -apple-system, Segoe UI, sans-serif; color: #0f172a; line-height: 1.45; font-size: 15px; background-color: #ffffff; width: 100%; box-sizing: border-box; margin: 0; padding: 0;">
-  <div style="background-color: #1e6eeb; border: 1px solid #1458c3; border-radius: 8px; padding: 14px; margin-bottom: 12px;">
-    <h3 style="margin: 0 0 6px 0; font-size: 18px; color: #ffffff;">Training plan options</h3>
-    <p style="margin: 0; color: #fbfdff;">Three coach-ready drafts for <strong>{escape(player_name)}</strong>. Choose one using the native action below.</p>
+<div style="width: 100%; background-color: #f8fafc; box-sizing: border-box; padding: 16px;">
+  <div style="width: 100%; max-width: 720px; margin: 0 auto; font-family: system-ui, -apple-system, Segoe UI, sans-serif; color: #0f172a; line-height: 1.45; font-size: 15px;">
+    <div style="background-color: #ffffff; border: 1px solid #dbe5f0; border-left: 4px solid #1e6eeb; border-radius: 22px; padding: 18px; margin-bottom: 16px; box-shadow: 0 4px 14px rgba(15,23,42,0.06);">
+      <h3 style="margin: 0 0 6px 0; font-size: 22px; line-height: 1.2; color: #0f172a; font-weight: 800;">Training plan options</h3>
+      <p style="margin: 0; color: #64748b; font-size: 14px;">{count_label} clean {draft_label} for <strong>{escape(player_name)}</strong>. Review the sessions, then choose one from the native app actions.</p>
+    </div>
+    {option_cards}
   </div>
-  {option_cards}
 </div>
 """
     return sanitize_assistant_html(html)
 
 
-def render_plan_option_card(option):
+def render_plan_option_card(option, *, index=1):
+    difficulty_background, difficulty_color = _difficulty_chip_colors(option["difficulty"])
     focus_chips = "".join(
-        f'<span style="display: inline-block; background-color: #fbfdff; color: #1458c3; '
-        f'border: 1px solid #dbe5f0; '
-        f'border-radius: 8px; padding: 4px 8px; margin: 0 6px 6px 0; font-size: 12px; '
-        f'font-weight: 600;">{escape(area)}</span>'
+        f'<span style="display: inline-block; background-color: #e8f1ff; color: #1458c3; '
+        f'border-radius: 999px; padding: 6px 10px; margin: 0 6px 6px 0; font-size: 12px; '
+        f'font-weight: 700;">{escape(area)}</span>'
         for area in option["focus_areas"]
     )
+    preview_sessions = option["preview_sessions"][:3]
     preview_items = "".join(
-        render_preview_session_item(session)
-        for session in option["preview_sessions"][:3]
+        render_preview_session_item(session, is_last=session_index == len(preview_sessions))
+        for session_index, session in enumerate(preview_sessions, start=1)
     )
     return f"""
-  <div style="background-color: #ffffff; border: 1px solid #dbe5f0; border-radius: 8px; padding: 14px; margin-bottom: 12px; box-shadow: 0 10px 24px #dbe5f0;">
-    <div style="margin-bottom: 8px;">
-      <h4 style="margin: 0 0 4px 0; font-size: 16px; color: #0f172a;">{escape(option["title"])}</h4>
-      <p style="margin: 0; color: #64748b;">{escape(option["description"])}</p>
+    <div style="background-color: #ffffff; border: 1px solid #dbe5f0; border-radius: 22px; padding: 16px; margin-bottom: 14px; box-shadow: 0 4px 14px rgba(15,23,42,0.06);">
+      <div style="margin-bottom: 12px;">
+        <div style="margin-bottom: 8px;">
+          <span style="display: inline-block; background-color: #1e6eeb; color: #ffffff; border-radius: 999px; padding: 5px 11px; margin: 0 6px 6px 0; font-size: 12px; font-weight: 800;">Option {index}</span>
+          <span style="display: inline-block; background-color: {difficulty_background}; color: {difficulty_color}; border-radius: 999px; padding: 5px 11px; margin: 0 6px 6px 0; font-size: 12px; font-weight: 800;">{escape(option["difficulty"])}</span>
+        </div>
+        <h4 style="margin: 0 0 6px 0; font-size: 18px; line-height: 1.25; color: #0f172a; font-weight: 800; word-break: break-word;">{escape(option["title"])}</h4>
+        <p style="margin: 0; color: #64748b; font-size: 14px; word-break: break-word;">{escape(option["description"])}</p>
+      </div>
+      <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 16px; padding: 12px; margin-bottom: 12px; color: #475569; font-size: 13px;">
+        {_plan_summary(option)}
+      </div>
+      <div style="margin-bottom: 14px;">
+        {focus_chips}
+      </div>
+      <div style="border-top: 1px solid #e2e8f0; padding-top: 12px;">
+        <p style="margin: 0 0 10px 0; font-size: 13px; font-weight: 800; color: #0f172a;">Preview sessions</p>
+        {preview_items}
+      </div>
     </div>
-    <div style="margin: 8px 0;">
-      <span style="display: inline-block; background-color: #f59e0b; color: #ffffff; border-radius: 8px; padding: 4px 8px; margin: 0 6px 6px 0; font-size: 12px; font-weight: 700;">{escape(option["difficulty"])}</span>
-      <span style="display: inline-block; background-color: #22c55e; color: #ffffff; border-radius: 8px; padding: 4px 8px; margin: 0 6px 6px 0; font-size: 12px; font-weight: 700;">{escape(str(option["sessions_count"]))} sessions</span>
-      <span style="display: inline-block; background-color: #2f78ef; color: #ffffff; border-radius: 8px; padding: 4px 8px; margin: 0 6px 6px 0; font-size: 12px; font-weight: 700;">{escape(option["duration"])}</span>
-      <span style="display: inline-block; background-color: #fbfdff; color: #0f172a; border: 1px solid #dbe5f0; border-radius: 8px; padding: 4px 8px; margin: 0 6px 6px 0; font-size: 12px; font-weight: 700;">Start date: {escape(option["start_date"])}</span>
-      <span style="display: inline-block; background-color: #fbfdff; color: #0f172a; border: 1px solid #dbe5f0; border-radius: 8px; padding: 4px 8px; margin: 0 6px 6px 0; font-size: 12px; font-weight: 700;">End date: {escape(option["end_date"])}</span>
-    </div>
-    <div style="margin: 4px 0 8px 0;">{focus_chips}</div>
-    <div style="background-color: #fbfdff; border-top: 1px solid #dbe5f0; padding-top: 10px;">
-      <p style="margin: 0 0 6px 0; color: #0f172a; font-size: 13px; font-weight: 700;">Preview sessions</p>
-      <ul style="margin: 0; padding-left: 18px;">{preview_items}</ul>
-    </div>
-  </div>
 """
 
 
-def render_preview_session_item(session):
+def render_preview_session_item(session, *, is_last=False):
+    row_style = (
+        "padding: 0 0 10px 0; margin-bottom: 10px; border-bottom: 1px solid #e2e8f0;"
+        if not is_last
+        else ""
+    )
     return f"""
-        <li style="margin-bottom: 6px;">
-          <strong>{escape(session["day_label"])}:</strong> {escape(session["title"])}
-          <br>
-          <span style="color: #64748b;">Type: {escape(session["session_type"])} - Intensity: {escape(session["intensity"])}</span>
-          <br>
-          <span style="color: #64748b;">Start: {escape(session["start_time"])} - End: {escape(session["end_time"])} - Location: {escape(session["location"])}</span>
-        </li>
+        <div style="{row_style}">
+          <p style="margin: 0 0 3px 0; color: #0f172a; font-size: 14px; font-weight: 800; word-break: break-word;">{escape(session["day_label"])} &middot; {escape(session["title"])}</p>
+          <p style="margin: 0; color: #64748b; font-size: 13px;">{escape(session["start_time"])}&ndash;{escape(session["end_time"])} &middot; {_display_label(session["session_type"])} &middot; {_display_label(session["intensity"])} &middot; {escape(session["location"])}</p>
+        </div>
 """
+
+
+def _plan_summary(option):
+    sessions_count = option["sessions_count"]
+    session_label = "session" if sessions_count == 1 else "sessions"
+    date_range = _format_plan_date_range(option["start_date"], option["end_date"])
+    return f'<strong style="color: #0f172a;">{escape(str(sessions_count))} {session_label}</strong> &middot; {date_range}'
+
+
+def _format_plan_date_range(start_date, end_date):
+    start = parse_date(str(start_date or ""))
+    end = parse_date(str(end_date or ""))
+    if start is None or end is None:
+        return f"{escape(str(start_date or ''))}&ndash;{escape(str(end_date or ''))}"
+
+    start_month = start.strftime("%b")
+    end_month = end.strftime("%b")
+    if start.year == end.year and start.month == end.month:
+        return f"{start_month} {start.day}&ndash;{end.day}, {start.year}"
+    if start.year == end.year:
+        return f"{start_month} {start.day}&ndash;{end_month} {end.day}, {start.year}"
+    return f"{start_month} {start.day}, {start.year}&ndash;{end_month} {end.day}, {end.year}"
+
+
+def _difficulty_chip_colors(value):
+    normalized = str(value or "").lower()
+    if any(token in normalized for token in ("advanced", "high", "hard", "intense")):
+        return "#fee2e2", "#b91c1c"
+    return "#fff7ed", "#b45309"
+
+
+def _display_label(value):
+    return escape(str(value or "").replace("_", " ").title())
+
+
+def _count_label(count):
+    labels = {
+        1: "One",
+        2: "Two",
+        3: "Three",
+        4: "Four",
+        5: "Five",
+    }
+    return labels.get(count, str(count))
 
 
 def sanitize_assistant_html(html):
@@ -142,8 +201,8 @@ def _render_answer_text(answer, status):
     suffix = re.sub(r"^\)", "", suffix).lstrip()
 
     chip = (
-        f'<span style="display: inline-block; background-color: {_status_chip_background(status)}; '
-        f'color: {_status_chip_text_color(status)}; border-radius: 8px; padding: 3px 8px; '
+        f'<span style="display: inline-block;'
+        f'color: {_status_chip_text_color(status)}; border-radius: 8px; padding: 3px 8px;'
         f'margin: 0 2px; font-size: 12px; font-weight: 700;">{escape(status)}</span>'
     )
     return f"{escape(prefix)} {chip}{escape(suffix)}".strip()

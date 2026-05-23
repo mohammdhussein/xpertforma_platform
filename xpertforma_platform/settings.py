@@ -225,9 +225,6 @@ PASSWORD_SETUP_DEEP_LINK_BASE = os.getenv(
 
 AI_ASSISTANT_ENABLED = os.getenv("AI_ASSISTANT_ENABLED", "False") == "True"
 
-# Use groq now
-AI_PROVIDER = os.getenv("AI_PROVIDER", "groq")
-
 # Groq config
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
 GROQ_BASE_URL = os.getenv("GROQ_BASE_URL", "https://api.groq.com/openai/v1")
@@ -238,11 +235,9 @@ GROQ_FALLBACK_MODEL = os.getenv("GROQ_FALLBACK_MODEL", "openai/gpt-oss-20b")
 AI_RESPONSE_TEMPERATURE = float(os.getenv("AI_RESPONSE_TEMPERATURE", "0.2"))
 AI_RANDOM_SEED = int(os.getenv("AI_RANDOM_SEED", "7"))
 AI_MAX_CONTEXT_DAYS = int(os.getenv("AI_MAX_CONTEXT_DAYS", "14"))
-AI_MAX_HISTORY_MESSAGES = int(os.getenv("AI_MAX_HISTORY_MESSAGES", "8"))
 AI_CONVERSATION_CACHE_TTL_SECONDS = int(os.getenv("AI_CONVERSATION_CACHE_TTL_SECONDS", "1800"))
 
 # HTML response
 AI_DEFAULT_RESPONSE_FORMAT = os.getenv("AI_DEFAULT_RESPONSE_FORMAT", "html")
-AI_PLAN_OPTIONS_COUNT = int(os.getenv("AI_PLAN_OPTIONS_COUNT", "3"))
 
 AUTH_USER_MODEL = "accounts.User"

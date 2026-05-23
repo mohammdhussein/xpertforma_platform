@@ -15,7 +15,21 @@ from training.statuses import Intensity, VALID_TRAINING_SESSION_TYPES
 
 
 PLAN_OPTION_COUNT = 3
+MIN_PLAN_OPTION_COUNT = 1
+MAX_PLAN_OPTION_COUNT = 5
 VALID_INTENSITIES = set(Intensity.values)
+NUMBER_WORDS = {
+    "one": 1,
+    "two": 2,
+    "three": 3,
+    "four": 4,
+    "five": 5,
+    "six": 6,
+    "seven": 7,
+    "eight": 8,
+    "nine": 9,
+    "ten": 10,
+}
 
 
 class AIPlanInvalidResponse(Exception):
@@ -34,11 +48,24 @@ class AIPlanInvalidSelection(Exception):
     pass
 
 
+class AIPlanOptionCountOutOfRange(Exception):
+    pass
+
+
 def is_plan_suggestion_request(message):
     normalized = (message or "").lower()
     has_plan_word = bool(re.search(r"\b(plan|plans|program|programs|training plan)\b", normalized))
     has_action_word = bool(re.search(r"\b(suggest|create|generate|build|recommend|prepare|make)\b", normalized))
     return has_plan_word and has_action_word
+
+
+def parse_requested_plan_option_count(message):
+    count = _extract_requested_plan_option_count(message)
+    if count is None:
+        return PLAN_OPTION_COUNT
+    if count < MIN_PLAN_OPTION_COUNT or count > MAX_PLAN_OPTION_COUNT:
+        raise AIPlanOptionCountOutOfRange("Requested plan option count must be between 1 and 5.")
+    return count
 
 
 def parse_requested_plan_date_range(message):
@@ -91,11 +118,21 @@ def parse_requested_plan_date_range(message):
     return {"start_date": start_date, "end_date": end_date}
 
 
-def generate_plan_options_for_player(*, coach_user, player_profile):
-    return generate_plan_options_for_players(coach_user=coach_user, player_profiles=[player_profile])
+def generate_plan_options_for_player(*, coach_user, player_profile, option_count=PLAN_OPTION_COUNT):
+    return generate_plan_options_for_players(
+        coach_user=coach_user,
+        player_profiles=[player_profile],
+        option_count=option_count,
+    )
 
 
-def generate_plan_options_for_players(*, coach_user, player_profiles, requested_date_range=None):
+def generate_plan_options_for_players(
+    *,
+    coach_user,
+    player_profiles,
+    requested_date_range=None,
+    option_count=PLAN_OPTION_COUNT,
+):
     player_context = [build_player_context(profile) for profile in player_profiles]
     today = timezone.localdate()
     requested_date_range = requested_date_range or {}
@@ -106,21 +143,33 @@ def generate_plan_options_for_players(*, coach_user, player_profiles, requested_
         player_context=player_context,
         start_date=start_date,
         end_date=end_date,
+        option_count=option_count,
     )
     client = GroqChatClient()
     raw_content = client.chat_json(system_prompt=system_prompt, user_prompt=user_prompt)
     try:
-        options = parse_plan_options(raw_content, start_date=start_date, end_date=end_date)
+        options = parse_plan_options(
+            raw_content,
+            start_date=start_date,
+            end_date=end_date,
+            expected_count=option_count,
+        )
     except AIPlanInvalidResponse as exc:
         repair_system_prompt, repair_user_prompt = build_plan_repair_prompts(
             player_context=player_context,
             start_date=start_date,
             end_date=end_date,
+            option_count=option_count,
             invalid_content=raw_content,
             validation_error=str(exc),
         )
         raw_content = client.chat_json(system_prompt=repair_system_prompt, user_prompt=repair_user_prompt)
-        options = parse_plan_options(raw_content, start_date=start_date, end_date=end_date)
+        options = parse_plan_options(
+            raw_content,
+            start_date=start_date,
+            end_date=end_date,
+            expected_count=option_count,
+        )
 
     draft = save_plan_draft(
         coach_user=coach_user,
@@ -130,10 +179,10 @@ def generate_plan_options_for_players(*, coach_user, player_profiles, requested_
     return draft, options
 
 
-def build_plan_generation_prompts(*, coach_user, player_context, start_date, end_date=None):
-    option_count = int(getattr(settings, "AI_PLAN_OPTIONS_COUNT", PLAN_OPTION_COUNT))
+def build_plan_generation_prompts(*, coach_user, player_context, start_date, end_date=None, option_count=PLAN_OPTION_COUNT):
     date_rules = [f"Every option must start on {start_date.isoformat()}."]
     prompt_dates = {"plan_start_date": start_date.isoformat()}
+    option_ids = _option_ids(option_count)
     if end_date is not None:
         date_rules.extend(
             [
@@ -180,7 +229,7 @@ def build_plan_generation_prompts(*, coach_user, player_context, start_date, end
             },
             "rules": [
                 f"Return exactly {option_count} options.",
-                "Use option_id values option_1, option_2, and option_3.",
+                f"Use option_id values {', '.join(option_ids)}.",
                 "Use only realistic football training content.",
                 "If multiple players are provided, make the plan suitable for all selected players together.",
                 "Keep preview_sessions concise but sufficient to create the plan.",
@@ -196,9 +245,17 @@ def build_plan_generation_prompts(*, coach_user, player_context, start_date, end
     return system_prompt, user_prompt
 
 
-def build_plan_repair_prompts(*, player_context, start_date, invalid_content, validation_error, end_date=None):
-    option_count = int(getattr(settings, "AI_PLAN_OPTIONS_COUNT", PLAN_OPTION_COUNT))
+def build_plan_repair_prompts(
+    *,
+    player_context,
+    start_date,
+    invalid_content,
+    validation_error,
+    end_date=None,
+    option_count=PLAN_OPTION_COUNT,
+):
     prompt_dates = {"plan_start_date": start_date.isoformat()}
+    option_ids = _option_ids(option_count)
     if end_date is not None:
         prompt_dates["plan_end_date"] = end_date.isoformat()
     system_prompt = (
@@ -210,8 +267,8 @@ def build_plan_repair_prompts(*, player_context, start_date, invalid_content, va
         {
             "validation_error": validation_error,
             "invalid_response": invalid_content[:6000],
-            "required_shape": _plan_response_shape(),
-            "required_option_ids": ["option_1", "option_2", "option_3"],
+            "required_shape": _plan_response_shape(option_count),
+            "required_option_ids": option_ids,
             **prompt_dates,
             "players": player_context,
             "hard_rules": [
@@ -235,7 +292,7 @@ def build_plan_repair_prompts(*, player_context, start_date, invalid_content, va
     return system_prompt, user_prompt
 
 
-def parse_plan_options(raw_content, *, start_date, end_date=None):
+def parse_plan_options(raw_content, *, start_date, end_date=None, expected_count=PLAN_OPTION_COUNT):
     payload = _load_json_payload(raw_content)
     raw_options = None
     if isinstance(payload, dict):
@@ -252,7 +309,6 @@ def parse_plan_options(raw_content, *, start_date, end_date=None):
     if not isinstance(raw_options, list):
         raise AIPlanInvalidResponse("Groq response must include an options array.")
 
-    expected_count = int(getattr(settings, "AI_PLAN_OPTIONS_COUNT", PLAN_OPTION_COUNT))
     if len(raw_options) != expected_count:
         raise AIPlanInvalidResponse(f"Groq response must include exactly {expected_count} plan options.")
 
@@ -534,34 +590,66 @@ def _format_duration_label(*, start_date, end_date):
     return f"{days} day" if days == 1 else f"{days} days"
 
 
-def _plan_response_shape():
-    return {
-        "options": [
-            {
-                "option_id": "option_1",
-                "title": "string",
-                "description": "string",
-                "duration": "7 days",
-                "difficulty": "Beginner|Intermediate|Advanced",
-                "focus_areas": ["string"],
-                "sessions_count": 3,
-                "preview_sessions": [
-                    {
-                        "title": "string",
-                        "day_label": "Day 1",
-                        "session_type": "GROUP",
-                        "start_time": "09:00",
-                        "end_time": "10:00",
-                        "intensity": "MEDIUM",
-                        "location": "string",
-                        "notes": "string",
-                    }
-                ],
-            },
-            {"option_id": "option_2"},
-            {"option_id": "option_3"},
-        ]
-    }
+def _plan_response_shape(option_count=PLAN_OPTION_COUNT):
+    options = [
+        {
+            "option_id": "option_1",
+            "title": "string",
+            "description": "string",
+            "duration": "7 days",
+            "difficulty": "Beginner|Intermediate|Advanced",
+            "focus_areas": ["string"],
+            "sessions_count": 3,
+            "preview_sessions": [
+                {
+                    "title": "string",
+                    "day_label": "Day 1",
+                    "session_type": "GROUP",
+                    "start_time": "09:00",
+                    "end_time": "10:00",
+                    "intensity": "MEDIUM",
+                    "location": "string",
+                    "notes": "string",
+                }
+            ],
+        }
+    ]
+    options.extend({"option_id": option_id} for option_id in _option_ids(option_count)[1:])
+    return {"options": options}
+
+
+def _extract_requested_plan_option_count(message):
+    text = re.sub(r"\s+", " ", str(message or "").lower()).strip()
+    if not text:
+        return None
+
+    numeric_patterns = (
+        r"\b(\d+)\s+(?:[a-z]+\s+){0,3}(?:plan\s+options|plans|programs|options)\b",
+        r"\b(1)\s+(?:training\s+)?(?:plan|program)\b",
+    )
+    for pattern in numeric_patterns:
+        match = re.search(pattern, text)
+        if match:
+            return int(match.group(1))
+
+    word_pattern = (
+        r"\b(one|two|three|four|five|six|seven|eight|nine|ten)\s+"
+        r"(?:[a-z]+\s+){0,3}(?:plan\s+options|plans|programs|options)\b"
+    )
+    match = re.search(word_pattern, text)
+    if match:
+        return NUMBER_WORDS[match.group(1)]
+
+    singular_word_pattern = r"\b(one)\s+(?:training\s+)?(?:plan|program)\b"
+    match = re.search(singular_word_pattern, text)
+    if match:
+        return NUMBER_WORDS[match.group(1)]
+
+    return None
+
+
+def _option_ids(option_count):
+    return [f"option_{index}" for index in range(1, option_count + 1)]
 
 
 def _as_positive_int(value, *, field):
