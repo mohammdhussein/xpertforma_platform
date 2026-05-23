@@ -604,7 +604,7 @@
         <h2>AI Assistant</h2>
 
         <div class="endpoint"
-             data-search="POST /api/ai/chat ai assistant chatbot agent groq training plans message response_format html draft_id option_id select_plan_option select_player start_date end_date">
+             data-search="POST /api/ai/chat ai assistant chatbot agent groq training plans plan count message response_format html draft_id option_id select_plan_option select_player start_date end_date">
             <div><span class="badge post">POST</span><span class="path">/api/ai/chat/</span></div>
             <p class="meta">Authenticated player or approved coach. This endpoint is chatbot, app-data assistant, and
                 agent in one endpoint: app-data questions such as latest sessions, attendance, progress, readiness,
@@ -618,7 +618,7 @@
                 <div class="card">
                     <h4>Request Body</h4>
                     <pre>{
-  "message": "Suggest 3 plans for Ahmad",
+  "message": "Suggest 2 plans for Ahmad",
   "response_format": "html"
 }</pre>
                     <pre>{
@@ -645,9 +645,9 @@
   ]
 }</pre>
                     <pre>{
-  "answer": "I drafted 3 training plan options for Ahmad Saleh.",
+  "answer": "I drafted 2 training plan options for Ahmad Saleh.",
   "render_type": "html",
-  "html": "&lt;div style=\"...\"&gt;...safe plan cards with Start date, End date, Start, and End labels...&lt;/div&gt;",
+  "html": "&lt;div style=\"...\"&gt;...safe plan cards with compact date summaries and preview session rows...&lt;/div&gt;",
   "cards": [],
   "actions": [
     {
@@ -659,8 +659,8 @@
     }
   ],
   "suggested_questions": [
-    "Suggest 3 recovery plans for Ahmad Saleh",
-    "Suggest 3 speed plans for Ahmad Saleh",
+    "Suggest 2 recovery plans for Ahmad Saleh",
+    "Suggest 2 speed plans for Ahmad Saleh",
     "How should I choose between these plans?"
   ]
 }</pre>
@@ -702,9 +702,17 @@
                             <code>user_id</code>, <code>coach_id</code>, <code>role</code>, <code>html</code>, and
                             <code>player_id</code>.</li>
                         <li>Normal chatbot answers return the same mobile response shape with empty
-                            <code>actions</code> and three <code>suggested_questions</code>.</li>
+                            <code>actions</code> and three <code>suggested_questions</code>. Normal answer HTML is
+                            rendered as a white card on a full-width white response surface, avoiding the light gray
+                            wrapper background. Session-status answers use a colored left border: green for <code>COMPLETED</code>, red for
+                            <code>MISSED</code>, blue for <code>IN_PROGRESS</code>, and gray for
+                            <code>NOT_STARTED</code>.</li>
                         <li><code>suggested_questions</code>: always present on successful assistant responses and
                             contains up to three follow-up prompts.</li>
+                        <li>Plan requests can ask for <code>1</code> to <code>5</code> options, for example
+                            <code>Suggest 2 plans for Omar</code>. If no count is included, Django defaults to
+                            three options. Out-of-range counts return a friendly clarification response and do not call
+                            Groq or create a draft.</li>
                         <li>Plan requests can name one player or multiple players, for example
                             <code>Suggest 3 training plans for Omar and Kareem</code>. If each name resolves to exactly
                             one player owned by the signed-in coach, Django saves one draft for all matched players and
@@ -712,12 +720,13 @@
                         <li>Plan requests can include simple natural date wording such as
                             <code>start from the current day</code>, <code>start today</code>, and
                             <code>end in the tomorrow day</code>. When detected, Django passes the requested range to
-                            Groq, stores it in the draft options, renders <code>Start date</code> and
-                            <code>End date</code> chips in the HTML, and validates that all preview sessions stay inside
+                            Groq, stores it in the draft options, renders a compact date summary such as
+                            <code>May 24&amp;ndash;30, 2026</code>, and validates that all preview sessions stay inside
                             the range.</li>
                         <li>If a requested name matches multiple roster players, Django returns
                             <code>select_player</code> actions instead of guessing.</li>
-                        <li>For plan requests, Groq must return structured JSON with exactly three options. If Groq
+                        <li>For plan requests, Groq must return structured JSON with exactly the requested option count.
+                            If Groq
                             returns the wrong shape or option count, Django sends one repair prompt before returning an
                             invalid-response error. Django converts valid JSON into sanitized HTML and never trusts
                             model-generated HTML.</li>
@@ -725,13 +734,13 @@
                             <code>span</code>, <code>strong</code>, <code>b</code>, <code>ul</code>, <code>li</code>,
                             and <code>br</code>, with inline <code>style</code> attributes only. JavaScript, forms,
                             external CSS, external images, scripts, and buttons inside HTML are not allowed. Plan cards
-                            include explicit session <code>Start</code> and <code>End</code> time labels.</li>
-                        <li>Assistant HTML uses the app theme colors: primary <code>#1e6eeb</code>, primary gradient
-                            <code>#2f78ef</code>, primary hover <code>#1458c3</code>, secondary <code>#22c55e</code>,
-                            orange <code>#f59e0b</code>, danger <code>#ef4444</code>, text <code>#0f172a</code>,
-                            muted <code>#64748b</code>, border <code>#dbe5f0</code>, background
-                            <code>#f8fafc</code>, soft background <code>#fbfdff</code>, and surface
-                            <code>#ffffff</code>.</li>
+                            use display-only HTML; native controls come from <code>actions[]</code>.</li>
+                        <li>Assistant plan HTML uses the XpertForma theme: primary <code>#1e6eeb</code>, dark text
+                            <code>#0f172a</code>, secondary text <code>#64748b</code>, border
+                            <code>#dbe5f0</code>, page background <code>#f8fafc</code>, card background
+                            <code>#ffffff</code>, light chips <code>#e8f1ff</code>/<code>#1458c3</code>, medium chips
+                            <code>#fff7ed</code>/<code>#b45309</code>, and high chips
+                            <code>#fee2e2</code>/<code>#b91c1c</code>.</li>
                         <li><code>actions[]</code> are rendered by the mobile app as native Kotlin Compose controls.</li>
                     </ul>
                 </div>
@@ -751,13 +760,18 @@ HTTP 504   { "detail": "Groq request timed out." }</pre>
         </div>
 
         <div class="endpoint"
-             data-search="POST /api/ai/actions/confirm ai assistant confirm create_training_plan_from_option draft_id selected_option_id">
+             data-search="POST /api/ai/actions/confirm ai assistant confirm select_plan_option create_training_plan_from_option draft_id option_id selected_option_id">
             <div><span class="badge post">POST</span><span class="path">/api/ai/actions/confirm/</span></div>
             <p class="meta">Authenticated approved coach only. Confirms one server-side AI plan draft option and creates
                 the training plan through the same coach plan creation service used by <code>/api/coach/plans/</code>.</p>
             <div class="grid">
                 <div class="card">
                     <h4>Request Body</h4>
+                    <pre>{
+  "action_type": "select_plan_option",
+  "draft_id": "draft-uuid",
+  "option_id": "option_1"
+}</pre>
                     <pre>{
   "action_type": "create_training_plan_from_option",
   "draft_id": "draft-uuid",
@@ -798,11 +812,11 @@ HTTP 504   { "detail": "Groq request timed out." }</pre>
                 <div class="card">
                     <h4>Expected Values</h4>
                     <ul>
-                        <li><code>action_type</code>: must be
-                            <code>create_training_plan_from_option</code>.</li>
+                        <li><code>action_type</code>: use <code>select_plan_option</code> from chat actions, or the
+                            legacy <code>create_training_plan_from_option</code>.</li>
                         <li><code>draft_id</code>: server-side draft UUID returned by chat actions.</li>
-                        <li><code>selected_option_id</code>: one of the option IDs in the saved draft, such as
-                            <code>option_1</code>.</li>
+                        <li><code>option_id</code> or <code>selected_option_id</code>: one of the option IDs in the
+                            saved draft, such as <code>option_1</code>.</li>
                         <li>Before saving, Django validates coach ownership, draft expiry, player ownership, selected
                             option existence, plan date order, session date range, session type, intensity, and session
                             time order.</li>

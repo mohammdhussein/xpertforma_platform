@@ -29,9 +29,11 @@ from ai_assistant.services.coach_ai_assistant_plans import (
     AIPlanDraftPermissionDenied,
     AIPlanInvalidResponse,
     AIPlanInvalidSelection,
+    AIPlanOptionCountOutOfRange,
     create_training_plan_from_draft_option,
     generate_plan_options_for_players,
     is_plan_suggestion_request,
+    parse_requested_plan_option_count,
     parse_requested_plan_date_range,
 )
 from ai_assistant.services.user_ai_assistant_chat import generate_chatbot_answer
@@ -77,6 +79,18 @@ class AIChatView(APIView):
             )
 
         _ensure_approved_coach(request.user)
+        try:
+            option_count = parse_requested_plan_option_count(message)
+        except AIPlanOptionCountOutOfRange:
+            answer = "I can draft between 1 and 5 training plan options. Please ask for a number in that range."
+            return Response(
+                _mobile_response(
+                    answer=answer,
+                    html=render_answer_html(answer),
+                    suggested_questions=_suggested_questions(request.user, mode="plan_count"),
+                )
+            )
+
         player_resolution = resolve_coach_player_targets(coach_user=request.user, message=message)
         if player_resolution["status"] == "no_match":
             name_hint = player_resolution.get("name_hint")
@@ -115,6 +129,7 @@ class AIChatView(APIView):
                 coach_user=request.user,
                 player_profiles=player_profiles,
                 requested_date_range=requested_date_range,
+                option_count=option_count,
             )
         except GroqConfigurationError:
             return Response(
@@ -138,7 +153,8 @@ class AIChatView(APIView):
             )
 
         player_name = format_player_names(player_profiles)
-        answer = f"I drafted 3 training plan options for {player_name}."
+        option_total = len(options)
+        answer = f"I drafted {option_total} training plan {_option_word(option_total)} for {player_name}."
         actions = [
             {
                 "type": "select_plan_option",
@@ -154,7 +170,12 @@ class AIChatView(APIView):
                 answer=answer,
                 html=render_plan_options_html(player_name=player_name, options=options),
                 actions=actions,
-                suggested_questions=_suggested_questions(request.user, mode="plan", player_name=player_name),
+                suggested_questions=_suggested_questions(
+                    request.user,
+                    mode="plan",
+                    player_name=player_name,
+                    option_count=option_total,
+                ),
             )
         )
 
@@ -212,12 +233,19 @@ def _mobile_response(*, answer, html, actions=None, suggested_questions=None):
     }
 
 
-def _suggested_questions(user, *, mode, player_name=None):
+def _suggested_questions(user, *, mode, player_name=None, option_count=3):
     if mode == "plan" and player_name:
         return [
-            f"Suggest 3 recovery plans for {player_name}",
-            f"Suggest 3 speed plans for {player_name}",
+            f"Suggest {option_count} recovery plans for {player_name}",
+            f"Suggest {option_count} speed plans for {player_name}",
             "How should I choose between these plans?",
+        ]
+
+    if mode == "plan_count":
+        return [
+            "Suggest 2 plans for one of my players",
+            "Suggest 3 training plans for one of my players",
+            "Suggest 5 recovery plans for one of my players",
         ]
 
     if mode == "no_player":
@@ -257,6 +285,10 @@ def _default_suggested_questions():
         "How should I plan training this week?",
         "How can I improve recovery?",
     ]
+
+
+def _option_word(count):
+    return "option" if count == 1 else "options"
 
 
 def _disabled_or_missing_key_response():

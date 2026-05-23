@@ -46,56 +46,36 @@ python manage.py runserver
 | `EMAIL_HOST_PASSWORD` | yes (email) | | SMTP password |
 | `PASSWORD_SETUP_DEEP_LINK_BASE` | no | render URL | Base URL for player invite deep links |
 | `AI_ASSISTANT_ENABLED` | no | `False` | Enable the AI assistant endpoint |
-| `AI_PROVIDER` | no | `ollama` | AI backend provider for `/api/ai/chat/`; use `ollama` locally or `gemini` with a server-side key |
-| `OLLAMA_BASE_URL` | no | `http://localhost:11434` | Local Ollama server base URL |
-| `OLLAMA_CHAT_MODEL` | no | `qwen3:4b` | Primary local Ollama chat model |
-| `OLLAMA_FALLBACK_MODEL` | no | `llama3.2:3b` | Fallback local Ollama chat model |
-| `OLLAMA_NUM_PREDICT` | no | `220` | Maximum local Ollama response tokens for one assistant answer |
-| `AI_RESPONSE_TEMPERATURE` | no | `0` | Generation temperature; keep at `0` for more repeatable answers |
-| `AI_RANDOM_SEED` | no | `7` | Ollama seed used to reduce repeated-answer drift |
-| `GEMINI_API_KEY` | Gemini only | | Server-side Gemini API key; never send this to mobile |
-| `GEMINI_MODEL` | no | `gemini-2.5-flash` | Primary Gemini model |
-| `GEMINI_FALLBACK_MODEL` | no | `gemini-2.5-flash-lite` | Fallback Gemini model |
+| `GROQ_API_KEY` | AI assistant | | Server-side Groq API key; never send this to mobile |
+| `GROQ_BASE_URL` | no | `https://api.groq.com/openai/v1` | Groq OpenAI-compatible API base URL |
+| `GROQ_MODEL` | no | `llama-3.3-70b-versatile` | Primary Groq chat model |
+| `GROQ_FALLBACK_MODEL` | no | `openai/gpt-oss-20b` | Fallback Groq chat model |
+| `AI_RESPONSE_TEMPERATURE` | no | `0.2` | Generation temperature |
+| `AI_RANDOM_SEED` | no | `7` | Groq seed used to reduce repeated-answer drift |
 | `AI_MAX_CONTEXT_DAYS` | no | `14` | Default recent backend data window |
-| `AI_MAX_HISTORY_MESSAGES` | no | `8` | Maximum recent user/assistant messages included for follow-up questions |
-| `AI_CONVERSATION_CACHE_TTL_SECONDS` | no | `1800` | Per-user server-side follow-up memory TTL when the client does not send history |
+| `AI_CONVERSATION_CACHE_TTL_SECONDS` | no | `1800` | Server-side AI plan draft TTL |
 
 ## Local AI Assistant
 
-For local development with Ollama, add these values to your local environment:
+For local development with Groq, add these values to your local environment:
 
 ```env
 AI_ASSISTANT_ENABLED=True
-AI_PROVIDER=ollama
-OLLAMA_BASE_URL=http://localhost:11434
-OLLAMA_CHAT_MODEL=qwen3:4b
-OLLAMA_FALLBACK_MODEL=llama3.2:3b
-OLLAMA_NUM_PREDICT=220
-AI_RESPONSE_TEMPERATURE=0
+GROQ_API_KEY=your_groq_api_key
+GROQ_BASE_URL=https://api.groq.com/openai/v1
+GROQ_MODEL=llama-3.3-70b-versatile
+GROQ_FALLBACK_MODEL=openai/gpt-oss-20b
+AI_RESPONSE_TEMPERATURE=0.2
 AI_RANDOM_SEED=7
 AI_MAX_CONTEXT_DAYS=14
-AI_MAX_HISTORY_MESSAGES=8
 AI_CONVERSATION_CACHE_TTL_SECONDS=1800
 ```
 
-The mobile app calls Django only. Django authenticates the user, routes the question to safe backend data sources,
-and builds compact facts from existing models/services. Clear factual questions such as profile/account fields,
-today's sessions, latest sessions, attendance summaries, readiness check-ins, and attention reasons are answered
-directly by Django for lower latency; other backend-data questions call the configured server-side AI provider. General
-questions are blocked before the model is called and return:
-
-```json
-{
-  "answer": "I can only help with information related to your XpertForma backend data, such as profiles, sessions, attendance, performance, readiness, progress, plans, players, and coach insights.",
-  "cards": [],
-  "actions": [],
-  "suggested_questions": [
-    "What is my latest session?",
-    "How is my weekly progress?",
-    "Show my attendance summary"
-  ]
-}
-```
+The mobile app calls Django only. Django authenticates the user, rejects unsupported client-supplied identity/context
+fields, routes safe backend-data questions to permission-scoped Django context, and answers clear factual questions
+directly when possible. Questions that need language generation call Groq server-side. Coach plan requests resolve
+player names from the signed-in coach's roster, ask Groq for 1 to 5 structured JSON plan options, validate and repair
+the JSON when needed, store a server-side draft, render sanitized HTML, and return native app actions for confirmation.
 
 Manual test after logging in and sending the JWT access token:
 
@@ -106,9 +86,7 @@ Content-Type: application/json
 
 {
   "message": "What is my latest session?",
-  "screen": "PLAYER_HOME",
-  "selected_player_id": null,
-  "history": []
+  "response_format": "html"
 }
 ```
 
@@ -121,9 +99,7 @@ Content-Type: application/json
 
 {
   "message": "How many sessions did I complete this week?",
-  "screen": "PLAYER_PROGRESS",
-  "selected_player_id": null,
-  "history": []
+  "response_format": "html"
 }
 ```
 
@@ -135,35 +111,25 @@ Authorization: Bearer <access_token>
 Content-Type: application/json
 
 {
-  "message": "What is this player's attendance this month?",
-  "screen": "COACH_PLAYER_PROFILE",
-  "selected_player_id": "<player_uuid>",
-  "history": []
+  "message": "Suggest 2 training plans for Ahmad Saleh",
+  "response_format": "html"
 }
 ```
 
-Follow-up example. The client can send recent turns, or Django will remember a few recent turns per authenticated user
-for `AI_CONVERSATION_CACHE_TTL_SECONDS`.
+Plan requests can ask for 1 to 5 plan options. If no count is included, Django defaults to 3 options. The HTML is only
+for display; the mobile app should render native buttons from the `actions` array.
+
+Plan confirmation example:
 
 ```http
-POST http://127.0.0.1:8000/api/ai/chat/
+POST http://127.0.0.1:8000/api/ai/actions/confirm/
 Authorization: Bearer <access_token>
 Content-Type: application/json
 
 {
-  "message": "why?",
-  "screen": "COACH_PLAYER_PROFILE",
-  "selected_player_id": "<player_uuid>",
-  "history": [
-    {
-      "role": "user",
-      "content": "Why does this player need attention?"
-    },
-    {
-      "role": "assistant",
-      "content": "This player needs attention because he missed the latest session."
-    }
-  ]
+  "action_type": "select_plan_option",
+  "draft_id": "<draft_uuid>",
+  "option_id": "option_1"
 }
 ```
 
